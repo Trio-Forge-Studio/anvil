@@ -1,6 +1,6 @@
 {
 	"name": "@trioforge/anvil",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Headless UI primitives for Roblox games, built on Vide",
 	"keywords": ["roblox", "roblox-ts", "vide", "ui", "headless", "gamepad"],
 	"bugs": "https://github.com/Trio-Forge-Studio/anvil/issues",
