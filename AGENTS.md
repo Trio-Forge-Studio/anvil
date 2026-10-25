@@ -10,13 +10,21 @@ Run every check before you call a change done:
 pnpm run check
 ```
 
-It runs oxfmt over `src`, rbxtsc, StyLua over the Luau tests, and the tests against the compiled package. Install the Node tools with `pnpm install`, and Lune and StyLua with `rokit install`. Fix the cause of a failure rather than silencing it.
+It runs oxfmt over `src` and `scripts`, rbxtsc, StyLua over the Luau tests, the tests against the compiled package, and the README examples. Install the Node tools with `pnpm install`, and Lune and StyLua with `rokit install`. Fix the cause of a failure rather than silencing it.
 
 ## Tests
 
 - Specs live in `test/` and run against the compiled package in `out/` through roblox-ts's runtime. `test/lib/load.luau` returns a `require` for one module realm. Pass `packages`, `services` and `globals` to replace Vide, Charm, Roblox services and engine globals.
 - `test/lib/harness.luau` drives the menu runtime with fake GuiService, UserInputService, instances and a test adapter. Assert what a game can observe: selection, `onClose` calls, presses, feedback kinds and the Menu claim.
 - Keep pure rules, such as `modal-state`, `selection-policy` and `press-state`, free of engine and framework imports, so specs can load them directly.
+
+## Docs examples
+
+The docs live in the website repository, under `src/content/docs/anvil/`. `node scripts/check-snippets.mjs <files>` compiles the `ts` and `tsx` examples in Markdown and MDX files against `src`. Blocks that share `group=<name>` in their info string build on each other, and `nocheck` skips a block. UI examples need the engine to run, so the check compiles them and doesn't run them. Run it on the website's Anvil docs after changing an example or an API:
+
+```sh
+node scripts/check-snippets.mjs README.md ../website/src/content/docs/anvil/*.mdx ../website/src/content/docs/anvil/*/*.mdx
+```
 
 ## Conventions
 

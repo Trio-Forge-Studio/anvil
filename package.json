@@ -19,8 +19,8 @@
 	"scripts": {
 		"build": "rbxtsc --type package",
 		"test": "rbxtsc --type package && lune run test",
-		"fmt": "oxfmt src",
-		"check": "oxfmt --check src && rbxtsc --type package && stylua --check test .lune && lune run test",
+		"fmt": "oxfmt src scripts",
+		"check": "oxfmt --check src scripts && rbxtsc --type package && stylua --check test .lune && lune run test && node scripts/check-snippets.mjs README.md",
 		"prepack": "rbxtsc --type package"
 	},
 	"peerDependencies": {

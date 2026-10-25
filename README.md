@@ -32,7 +32,7 @@ roblox-ts only looks for packages in the scopes your project lists, so add the `
 
 Anvil reads input and gives feedback only through an adapter that you install once, on the client, before any Anvil UI renders. Then start the menu runtime.
 
-```ts
+```ts group=readme
 import { atom } from "@rbxts/charm";
 import { UserInputService } from "@rbxts/services";
 import Vide from "@rbxts/vide";
@@ -85,7 +85,7 @@ startMenuRuntime();
 
 ## Build a modal
 
-```tsx
+```tsx group=readme
 function BuyButton(props: { onBuy: () => void }) {
 	const press = usePress({ onPress: props.onBuy, selectFirst: true });
 	return (
