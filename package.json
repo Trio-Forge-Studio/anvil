@@ -3,16 +3,16 @@
 	"version": "0.1.1",
 	"description": "Headless UI primitives for Roblox games, built on Vide",
 	"keywords": ["roblox", "roblox-ts", "vide", "ui", "headless", "gamepad"],
-	"bugs": "https://github.com/Trio-Forge-Studio/anvil/issues",
+	"bugs": "https://github.com/Trio-Forge-Studio/packages/issues",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/Trio-Forge-Studio/anvil.git"
+		"url": "git+https://github.com/Trio-Forge-Studio/packages.git",
+		"directory": "packages/anvil"
 	},
 	"license": "MIT",
 	"main": "out/init.luau",
 	"types": "out/index.d.ts",
 	"files": ["out", "!**/*.tsbuildinfo", "README.md", "LICENSE"],
-	"packageManager": "pnpm@12.15.0",
 	"publishConfig": {
 		"access": "public"
 	},

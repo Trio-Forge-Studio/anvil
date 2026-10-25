@@ -20,10 +20,10 @@ It runs oxfmt over `src` and `scripts`, rbxtsc, StyLua over the Luau tests, the 
 
 ## Docs examples
 
-The docs live in the website repository, under `src/content/docs/anvil/`. `node scripts/check-snippets.mjs <files>` compiles the `ts` and `tsx` examples in Markdown and MDX files against `src`. Blocks that share `group=<name>` in their info string build on each other, and `nocheck` skips a block. UI examples need the engine to run, so the check compiles them and doesn't run them. Run it on the website's Anvil docs after changing an example or an API:
+The docs live in `apps/docs/src/content/docs/anvil/`. `node scripts/check-snippets.mjs <files>` compiles the `ts` and `tsx` examples in Markdown and MDX files against `src`. Blocks that share `group=<name>` in their info string build on each other, and `nocheck` skips a block. UI examples need the engine to run, so the check compiles them and doesn't run them. Run it on the Anvil docs in `apps/docs` after changing an example or an API:
 
 ```sh
-node scripts/check-snippets.mjs README.md ../website/src/content/docs/anvil/*.mdx ../website/src/content/docs/anvil/*/*.mdx
+node scripts/check-snippets.mjs README.md ../../apps/docs/src/content/docs/anvil/*.mdx ../../apps/docs/src/content/docs/anvil/*/*.mdx
 ```
 
 ## Conventions
@@ -38,8 +38,8 @@ node scripts/check-snippets.mjs README.md ../website/src/content/docs/anvil/*.md
 Releases publish from CI. Bump `version` in `package.json` in a PR and merge it. Then tag that commit on `main` and push the tag:
 
 ```sh
-git tag v0.2.0 origin/main
-git push origin refs/tags/v0.2.0
+git tag anvil-v0.2.0 origin/main
+git push origin refs/tags/anvil-v0.2.0
 ```
 
-`.github/workflows/release.yml` refuses a tag that isn't on `main` or doesn't match the version, runs `pnpm run check`, and publishes with `npm publish` through npm trusted publishing, with provenance. Don't publish from a machine.
+The repository's `.github/workflows/release.yml` refuses a tag that isn't on `main` or doesn't match the version, runs `pnpm run check`, and publishes with `npm publish` through npm trusted publishing, with provenance. Don't publish from a machine.

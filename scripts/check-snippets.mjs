@@ -3,7 +3,7 @@
 // with group=<name> in its info string compiles after the earlier blocks of that group in the same file, so a
 // tutorial's steps can build on each other.
 //
-//   node scripts/check-snippets.mjs README.md ../website/src/content/docs/anvil/*.mdx ../website/src/content/docs/anvil/*/*.mdx
+//   node scripts/check-snippets.mjs README.md ../../apps/docs/src/content/docs/anvil/*.mdx ../../apps/docs/src/content/docs/anvil/*/*.mdx
 
 import { spawnSync } from "node:child_process";
 import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
