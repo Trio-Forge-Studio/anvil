@@ -10,7 +10,7 @@ Run every check before you call a change done:
 pnpm run check
 ```
 
-It runs oxfmt over `src` and `scripts`, rbxtsc, StyLua over the Luau tests, the tests against the compiled package, and the README examples. Install the Node tools with `pnpm install`, and Lune and StyLua with `rokit install`. Fix the cause of a failure rather than silencing it.
+It runs rbxtsc, StyLua over the Luau tests, the tests against the compiled package, and the README examples. Fix the cause of a failure rather than silencing it.
 
 ## Tests
 

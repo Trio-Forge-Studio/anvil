@@ -2,7 +2,14 @@
 	"name": "@trioforge/anvil",
 	"version": "0.1.1",
 	"description": "Headless UI primitives for Roblox games, built on Vide",
-	"keywords": ["roblox", "roblox-ts", "vide", "ui", "headless", "gamepad"],
+	"keywords": [
+		"roblox",
+		"roblox-ts",
+		"vide",
+		"ui",
+		"headless",
+		"gamepad"
+	],
 	"bugs": "https://github.com/Trio-Forge-Studio/packages/issues",
 	"repository": {
 		"type": "git",
@@ -12,15 +19,19 @@
 	"license": "MIT",
 	"main": "out/init.luau",
 	"types": "out/index.d.ts",
-	"files": ["out", "!**/*.tsbuildinfo", "README.md", "LICENSE"],
+	"files": [
+		"out",
+		"!**/*.tsbuildinfo",
+		"README.md",
+		"LICENSE"
+	],
 	"publishConfig": {
 		"access": "public"
 	},
 	"scripts": {
 		"build": "rbxtsc --type package",
 		"test": "rbxtsc --type package && lune run test",
-		"fmt": "oxfmt src scripts",
-		"check": "oxfmt --check src scripts && rbxtsc --type package && stylua --check test .lune && lune run test && node scripts/check-snippets.mjs README.md",
+		"check": "stylua --check test .lune && rbxtsc --type package && lune run test && node scripts/check-snippets.mjs README.md",
 		"prepack": "rbxtsc --type package"
 	},
 	"peerDependencies": {
@@ -31,13 +42,12 @@
 	},
 	"devDependencies": {
 		"@rbxts/charm": "^0.11.1",
-		"@rbxts/compiler-types": "3.0.0-types.0",
+		"@rbxts/compiler-types": "catalog:rbxts",
 		"@rbxts/services": "^1.6.0",
-		"@rbxts/types": "^1.0.958",
+		"@rbxts/types": "catalog:rbxts",
 		"@rbxts/vide": "^0.6.1",
 		"@rbxts/vide-charm": "^0.4.1",
-		"oxfmt": "^0.74.0",
-		"roblox-ts": "^3.0.0",
-		"typescript": "5.5.3"
+		"roblox-ts": "catalog:rbxts",
+		"typescript": "catalog:rbxts"
 	}
 }
