@@ -20,10 +20,10 @@ It runs rbxtsc, StyLua over the Luau tests, the tests against the compiled packa
 
 ## Docs examples
 
-The docs live in `apps/docs/src/content/docs/anvil/`. `node scripts/check-snippets.mjs <files>` compiles the `ts` and `tsx` examples in Markdown and MDX files against `src`. Blocks that share `group=<name>` in their info string build on each other, and `nocheck` skips a block. UI examples need the engine to run, so the check compiles them and doesn't run them. Run it on the Anvil docs in `apps/docs` after changing an example or an API:
+The docs live in `apps/docs/src/content/docs/anvil/`. `pnpm run examples <files>` compiles the `ts` and `tsx` examples in Markdown and MDX files against `src`, as the root `AGENTS.md` describes. UI examples need the engine to run, so Anvil's examples compile and don't run. Run it on the Anvil docs in `apps/docs` after changing an example or an API:
 
 ```sh
-node scripts/check-snippets.mjs README.md ../../apps/docs/src/content/docs/anvil/*.mdx ../../apps/docs/src/content/docs/anvil/*/*.mdx
+pnpm run examples README.md ../../apps/docs/src/content/docs/anvil/*.mdx ../../apps/docs/src/content/docs/anvil/*/*.mdx
 ```
 
 ## Conventions
