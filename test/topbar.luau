@@ -87,6 +87,53 @@ return {
 		assert(binding.selected() and button:GetAttribute("Selected") == true, "the game decides selection")
 		h.stop()
 	end,
+	["DPadUp selects the remembered or leftmost available icon only from play mode"] = function()
+		local h = harness()
+		local disabled = h.charm.atom(false)
+		local function placed(x, given)
+			local button = icon(h, given or { selected = false, onPress = function() end })
+			button.AbsolutePosition = { X = x, Y = 0 }
+			return button
+		end
+		local daily = placed(100)
+		placed(50, { selected = false, disabled = true, onPress = function() end })
+		local settings = placed(200, { selected = false, disabled = disabled, onPress = function() end })
+		placed(10).Visible = false
+		local function dpadUp()
+			h.finish(h.begin(h.enum.KeyCode.DPadUp))
+			h.flush()
+		end
+		dpadUp()
+		assert(h.gui.SelectedObject == daily, "skips disabled and hidden icons for the leftmost")
+		h.select(settings)
+		h.select(nil)
+		dpadUp()
+		assert(h.gui.SelectedObject == settings, "returns to the last selected icon")
+		h.select(nil)
+		disabled(true)
+		dpadUp()
+		assert(h.gui.SelectedObject == daily, "a disabled remembered icon falls back")
+		local hud = h.control("Base", "Hud")
+		h.select(hud)
+		dpadUp()
+		assert(h.gui.SelectedObject == hud, "an existing selection stays")
+		h.select(nil)
+		local screen = h.root(10, "Pointer")
+		dpadUp()
+		assert(h.gui.SelectedObject == nil, "an open modal blocks top bar focus")
+		h.runtime.closeRoot(screen)
+		h.gui.MenuIsOpen = true
+		dpadUp()
+		assert(h.gui.SelectedObject == nil, "the Roblox menu blocks top bar focus")
+		h.gui.MenuIsOpen = false
+		h.device("Keyboard")
+		dpadUp()
+		assert(h.gui.SelectedObject == nil, "only a gamepad focuses the top bar")
+		h.device("Gamepad")
+		dpadUp()
+		assert(h.gui.SelectedObject == daily, "play mode focuses again")
+		h.stop()
+	end,
 	["top bar caption shows after half a second of mouse hover and hides when selected"] = function()
 		local h = harness()
 		h.device("Keyboard")

@@ -4,7 +4,7 @@ import { adapter } from "./adapter";
 import { Attribute } from "./attributes";
 import { heartbeat } from "./frame-loop";
 import type { Value } from "./props";
-import { ownerContext } from "./runtime";
+import { ownerContext, registerTopbarIcon } from "./runtime";
 import { usePress, type PressBinding } from "./use-press";
 
 const captionDelay = 0.5;
@@ -51,6 +51,7 @@ export function useTopbarIcon(options: TopbarIconOptions): TopbarIconBinding {
 		captionShown: derive(() => hoverElapsed() && !selected()),
 		action: (instance) => {
 			press.action(instance);
+			cleanup(registerTopbarIcon(instance, () => read(options.disabled ?? false)));
 			effect(() => instance.SetAttribute(Attribute.Selected, selected()));
 			effect(() => instance.SetAttribute(Attribute.Notice, notice()));
 		},

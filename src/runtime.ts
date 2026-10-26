@@ -6,6 +6,7 @@ import { adapter, type AnvilAdapter } from "./adapter";
 import type { Value } from "./props";
 import { enter, hasModal, leave, top, type ModalState } from "./modal-state";
 import { decide, emptySelection, type Selection, type SelectionEvent } from "./selection-policy";
+import { pickTopbarIcon } from "./topbar-policy";
 
 export type Owner = number | "Base" | "Topbar";
 export const ownerContext = context<Owner>("Base");
@@ -33,6 +34,8 @@ interface Control {
 }
 const roots = new Map<number, RootRecord>();
 const controls = new Map<GuiObject, Control>();
+const topbarIcons = new Map<GuiObject, () => boolean>();
+let lastTopbarIcon: GuiObject | undefined;
 let serial = 0;
 let baseRestore: GuiObject | undefined;
 let writing = false;
@@ -182,6 +185,7 @@ function selectionChanged(): void {
 	selectedWatch = [];
 	if (capturedA && capturedA.object !== current) cancelA();
 	if (!writing) cancelRequest();
+	if (current && topbarIcons.has(current)) lastTopbarIcon = current;
 	const control = current && controls.get(current);
 	if (current && control && typeIs(control.owner, "number"))
 		dispatch(control.owner, { kind: "Selected", object: current });
@@ -270,6 +274,23 @@ export function registerControl(object: GuiObject, control: Control, fallback = 
 		}
 	};
 }
+export function registerTopbarIcon(object: GuiObject, disabled: () => boolean): () => void {
+	topbarIcons.set(object, disabled);
+	return () => {
+		topbarIcons.delete(object);
+		if (lastTopbarIcon === object) lastTopbarIcon = undefined;
+	};
+}
+function selectTopbarIcon(): void {
+	if (GuiService.SelectedObject !== undefined || !canSelect("Topbar")) return;
+	const candidates = [...topbarIcons].map(([object, disabled]) => ({
+		object,
+		x: object.AbsolutePosition.X,
+		available: alive(object) && !disabled(),
+	}));
+	const target = pickTopbarIcon(candidates, lastTopbarIcon);
+	if (target) request("Topbar", target);
+}
 export function markControl(owner: Owner, object: GuiObject, marked: boolean): void {
 	if (!typeIs(owner, "number")) return;
 	const record = roots.get(owner);
@@ -341,6 +362,9 @@ function start(host: AnvilAdapter): void {
 			if (!object || !control?.buttonADown || !native(control.owner)) return;
 			capturedA = { object, input, control };
 			control.buttonADown(input);
+		}),
+		UserInputService.InputBegan.Connect((input) => {
+			if (input.KeyCode === Enum.KeyCode.DPadUp) selectTopbarIcon();
 		}),
 		UserInputService.InputEnded.Connect((input) => {
 			if (input.KeyCode === Enum.KeyCode.ButtonA && capturedA?.input.UserInputType === input.UserInputType)
