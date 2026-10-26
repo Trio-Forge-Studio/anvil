@@ -131,6 +131,18 @@ return {
 		wheel(1)
 		close(binding.view().zoom, 1.15, "a control inside the content does not block the wheel")
 		near((point + binding.view().pan) * binding.scale(), anchor, "the anchor holds across notches")
+		node.Parent = nil
+		local overlay = h.instance("Frame")
+		overlay.Parent = viewport
+		overlay.AbsolutePosition = cursor - Vector2.new(10, 10)
+		overlay.AbsoluteSize = Vector2.new(20, 20)
+		wheel(1)
+		close(
+			binding.view().zoom,
+			1.15,
+			"an opaque overlay inside the viewport but outside the content blocks the wheel"
+		)
+		overlay.Parent = nil
 		wheel(10)
 		close(binding.view().zoom, 1.6, "zoom stops at the default maximum")
 		wheel(-30)

@@ -425,7 +425,7 @@ export function WorldMap() {
 }
 ```
 
-- The left mouse button or a single touch drags the content. The mouse wheel zooms by 1.15 per notch around the cursor. It zooms only when the cursor is over the viewport and the topmost `Active` or opaque `GuiObject` there is the viewport or inside it. A two-finger pinch that starts over the viewport zooms around its midpoint and cancels the drag.
+- The left mouse button or a single touch drags the content. The mouse wheel zooms by 1.15 per notch around the cursor. It zooms only when the cursor is over the viewport and the topmost `Active` or opaque `GuiObject` there is the viewport itself or inside `PanZoom.Content`, so an opaque overlay such as a tooltip blocks it. A two-finger pinch that starts over the viewport zooms around its midpoint and cancels the drag.
 - The zoom stays between `minZoom` and `maxZoom`, 0.5 and 1.6 by default. Each pan passes through `clampPan(pan, scale, half)`. The default keeps content larger than the viewport covering it and centres smaller content, on each axis.
 - At zoom 1, the content is scaled by `fit(viewportSize)`, which by default fits the whole content inside the viewport. The viewport is measured in logical pixels, so a `UIScale` above it changes neither the fit nor drag distances. A transparent `ScaleProbe` frame in the viewport measures that scale. The fit is measured again when the viewport or that scale changes size.
 - When gamepad selection moves to a control inside the content, the view glides until the control's centre is at least 100 pixels inside each edge of the viewport. Pass `followSelection={{ inset: { topLeft, bottomRight } }}` to change the insets, or `false` to turn it off. Mouse hover and touch never select a control, so they never move the view.

@@ -57,14 +57,16 @@ const stickSpeed = 900;
 const triggerZoomPerSecond = 2;
 const zoomKeys = new Set<Enum.KeyCode>([Enum.KeyCode.ButtonL2, Enum.KeyCode.ButtonR2]);
 
-function reaches(viewport: GuiObject, point: Vector2): boolean {
+function reaches(viewport: GuiObject, content: GuiObject | undefined, point: Vector2): boolean {
 	const position = viewport.AbsolutePosition;
 	const corner = position.add(viewport.AbsoluteSize);
 	if (point.X < position.X || point.Y < position.Y || point.X > corner.X || point.Y > corner.Y) return false;
 	const gui = viewport.FindFirstAncestorOfClass("PlayerGui");
 	for (const object of gui?.GetGuiObjectsAtPosition(point.X, point.Y) ?? []) {
 		if (object.Active || object.BackgroundTransparency < 1)
-			return object === viewport || object.IsDescendantOf(viewport);
+			return (
+				object === viewport || (content !== undefined && (object === content || object.IsDescendantOf(content)))
+			);
 	}
 	return true;
 }
@@ -157,7 +159,7 @@ export function usePanZoom(options: PanZoomOptions): PanZoomBinding {
 	const moved = (input: InputObject) => {
 		if (input.UserInputType === Enum.UserInputType.MouseWheel) {
 			const point = new Vector2(input.Position.X, input.Position.Y);
-			if (!viewport || !reaches(viewport, point)) return;
+			if (!viewport || !reaches(viewport, untrack(content), point)) return;
 			glide(undefined);
 			zoomAt(view().zoom * wheelStep ** input.Position.Z, fromCentre(point));
 			return;
@@ -171,7 +173,7 @@ export function usePanZoom(options: PanZoomOptions): PanZoomBinding {
 	const pinched = (positions: Vector2[], factor: number, state: Enum.UserInputState) => {
 		const middle = positions.size() >= 2 ? positions[0].add(positions[1]).div(2) : undefined;
 		if (state === Enum.UserInputState.Begin) {
-			if (!middle || !viewport || !reaches(viewport, middle)) return;
+			if (!middle || !viewport || !reaches(viewport, untrack(content), middle)) return;
 			gesture = { kind: "Pinch", zoom: view().zoom };
 			dragging(false);
 			glide(undefined);
