@@ -16,4 +16,14 @@ return {
 		assert(M.pickTopbarIcon(candidates, "settings") == "daily", "an unavailable remembered icon falls back")
 		assert(M.pickTopbarIcon(candidates, "removed") == "daily", "a removed remembered icon falls back")
 	end,
+	["top bar layout copies TopbarPlus offsets for each inset"] = function()
+		local function expect(layout, gap: number, offsetY: number, sizeY: number, label: string)
+			assert(layout.gap == gap and layout.offsetY == offsetY and layout.sizeY == sizeY, label)
+		end
+		expect(M.topbarLayout(58, 58, false), 8, 0, -2, "the current top bar sits 2 px above the inset bottom")
+		expect(M.topbarLayout(58, 58, true), 10, -9, -2, "console widens the gap and raises the row")
+		expect(M.topbarLayout(36, 36, false), 12, 2, -2, "the legacy top bar uses its own offsets")
+		expect(M.topbarLayout(0, 0, false), 12, 15, 50, "a hidden top bar keeps a 50 px row")
+		expect(M.topbarLayout(0, 0, true), 10, 4, 50, "a hidden console top bar keeps a 50 px row")
+	end,
 }

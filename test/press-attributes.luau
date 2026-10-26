@@ -2,7 +2,7 @@ local harness = require("./lib/harness")
 return {
 	["attribute names are exported and frozen"] = function()
 		local names = require("./lib/load")()("attributes").Attribute
-		for _, name in { "Highlighted", "Pressed", "Disabled", "Selected", "Editing", "Invalid" } do
+		for _, name in { "Highlighted", "Pressed", "Disabled", "Selected", "Editing", "Invalid", "Notice" } do
 			assert(names[name] == name, "export matches instance attribute " .. name)
 		end
 		assert(table.isfrozen(names), "attribute contract cannot be mutated")

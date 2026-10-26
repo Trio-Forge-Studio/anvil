@@ -31,6 +31,19 @@ local function signal(): Mock
 		end,
 	}
 end
+local guiObjects = { "Frame", "TextButton", "TextBox", "TextLabel", "ImageLabel" }
+local classes = {
+	frame = "Frame",
+	textbutton = "TextButton",
+	textlabel = "TextLabel",
+	imagelabel = "ImageLabel",
+	screengui = "ScreenGui",
+	uicorner = "UICorner",
+	uigradient = "UIGradient",
+	uilistlayout = "UIListLayout",
+	uipadding = "UIPadding",
+	uistroke = "UIStroke",
+}
 local function harness(options: { deferredText: boolean }?): Mock
 	local deferred: { () -> () } = {}
 	local objects: { Mock } = {}
@@ -138,7 +151,7 @@ local function harness(options: { deferredText: boolean }?): Mock
 		end
 		function methods.IsA(_self, name)
 			return name == class
-				or (name == "GuiObject" and (class == "Frame" or class == "TextButton" or class == "TextBox"))
+				or (name == "GuiObject" and table.find(guiObjects, class) ~= nil)
 				or (name == "LayerCollector" and class == "ScreenGui")
 		end
 		function methods.FindFirstAncestorOfClass(self: Mock, name: string): Mock
@@ -152,6 +165,14 @@ local function harness(options: { deferredText: boolean }?): Mock
 			return nil
 		end
 		methods.FindFirstAncestorWhichIsA = methods.FindFirstAncestorOfClass
+		function methods.FindFirstChild(self: Mock, name: string): Mock
+			for _, child in objects do
+				if child.Parent == self and child.Name == name then
+					return child
+				end
+			end
+			return nil
+		end
 		for _, name in
 			{ "AncestryChanged", "InputBegan", "Activated", "MouseEnter", "MouseLeave", "Focused", "FocusLost" }
 		do
@@ -211,6 +232,14 @@ local function harness(options: { deferredText: boolean }?): Mock
 	end
 	local gui = instance("GuiService")
 	gui.MenuIsOpen = false
+	gui.PreferredTransparency = 1
+	gui.TopbarInset = { Height = 58 }
+	gui.GetGuiInset = function()
+		return roblox.Vector2.new(0, 58), roblox.Vector2.zero
+	end
+	gui.IsTenFootInterface = function()
+		return false
+	end
 	local playerGui = instance("PlayerGui")
 	local screens = {}
 	local function screen(order: number): Mock
@@ -220,11 +249,23 @@ local function harness(options: { deferredText: boolean }?): Mock
 		end
 		return screens[order]
 	end
-	vide.jsx = function(class, props, ...)
-		assert(class == "frame", "harness renders the modal frame")
-		local object = instance("Frame", screen(0))
+	vide.jsx = function(tag, given, ...)
+		local props = given or {}
+		if type(tag) == "function" then
+			return tag(props)
+		end
+		local class = classes[tag]
+		assert(class, "harness renders " .. tag)
+		local object = instance(class, if class == "ScreenGui" then playerGui else screen(0))
 		for name, value in props do
-			if name ~= "action" then
+			if name == "action" then
+				continue
+			end
+			if type(value) == "function" then
+				vide.effect(function()
+					object[name] = value()
+				end)
+			else
 				object[name] = value
 			end
 		end
@@ -297,7 +338,12 @@ local function harness(options: { deferredText: boolean }?): Mock
 		},
 		globals = {
 			Enum = roblox.Enum,
+			UDim = roblox.UDim,
 			UDim2 = roblox.UDim2,
+			Vector2 = roblox.Vector2,
+			Color3 = roblox.Color3,
+			ColorSequence = roblox.ColorSequence,
+			Font = roblox.Font,
 			Instance = { new = instance },
 			task = {
 				defer = function(run)

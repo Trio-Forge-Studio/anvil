@@ -223,6 +223,42 @@ export function DeleteDialog(props: { onConfirm: () => void; onCancel: () => voi
 }
 ```
 
+## Top bar
+
+`Topbar` returns a `ScreenGui` that covers Roblox's top bar inset, and `TopbarIcon` draws a TopbarPlus-style round icon inside it. Mount the top bar under `PlayerGui` with a `displayOrder` above your modals, or their backgrounds swallow its clicks. Icons sort by `order`.
+
+```tsx
+import { Players } from "@rbxts/services";
+import Vide, { mount, source } from "@rbxts/vide";
+import { Topbar, TopbarIcon } from "@trioforge/anvil";
+
+const settingsOpen = source(false);
+const unread = source(2);
+
+mount(
+	() => (
+		<Topbar side="Right" displayOrder={12}>
+			<TopbarIcon
+				name="Settings"
+				image="rbxassetid://0"
+				caption="Settings"
+				order={1}
+				notice={unread}
+				selected={settingsOpen}
+				onPress={() => settingsOpen(!settingsOpen())}
+			/>
+		</Topbar>
+	),
+	Players.LocalPlayer.WaitForChild("PlayerGui"),
+);
+```
+
+- `selected` is controlled. A press only calls `onPress`, so your state decides whether the icon lights up. Return `false` from `onPress` to play the refused feedback.
+- An icon stays pressable while a modal is open, so it can close the modal it opened. The Roblox menu still blocks it.
+- On a gamepad in play mode, DPadUp selects the last selected icon, or else the leftmost visible, enabled icon.
+- The caption appears after half a second of mouse hover and never on touch or gamepad.
+- To draw your own icon, call `useTopbarIcon` and attach its `action` to a button inside `Topbar`. It writes `Highlighted`, `Pressed`, `Disabled`, `Selected` and a numeric `Notice` attribute, and returns `captionShown` for your caption.
+
 ## License
 
 MIT
