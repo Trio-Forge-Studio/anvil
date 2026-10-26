@@ -108,6 +108,8 @@ local function harness(options: { deferredText: boolean }?): Mock
 			Text = "",
 			TextEditable = true,
 			ClipsDescendants = false,
+			Active = false,
+			BackgroundTransparency = 0,
 			AbsoluteSize = roblox.Vector2.new(100, 60),
 			AbsolutePosition = roblox.Vector2.zero,
 		}
@@ -159,6 +161,9 @@ local function harness(options: { deferredText: boolean }?): Mock
 			{ "AncestryChanged", "InputBegan", "Activated", "MouseEnter", "MouseLeave", "Focused", "FocusLost" }
 		do
 			properties[name] = signal()
+		end
+		function methods.Destroy(self)
+			self.Parent = nil
 		end
 		function methods.IsFocused(self)
 			return focused == self
@@ -224,6 +229,56 @@ local function harness(options: { deferredText: boolean }?): Mock
 		return false
 	end
 	local playerGui = instance("PlayerGui")
+	local function shown(object: Mock): boolean
+		local at = object
+		while at do
+			if at.Visible == false or (at:IsA("LayerCollector") and not at.Enabled) then
+				return false
+			end
+			at = at.Parent
+		end
+		return true
+	end
+	local function depth(object: Mock): number
+		local count, at = 0, object.Parent
+		while at do
+			count += 1
+			at = at.Parent
+		end
+		return count
+	end
+	-- Orders hits topmost first by DisplayOrder, then descendants above ancestors, then later siblings.
+	function playerGui.GetGuiObjectsAtPosition(_self, x: number, y: number): { Mock }
+		local hits = {}
+		for index, object in objects do
+			if not object:IsA("GuiObject") or not object:IsDescendantOf(playerGui) or not shown(object) then
+				continue
+			end
+			local position, size = object.AbsolutePosition, object.AbsoluteSize
+			if x >= position.X and y >= position.Y and x <= position.X + size.X and y <= position.Y + size.Y then
+				local layer = object:FindFirstAncestorOfClass("ScreenGui")
+				table.insert(hits, {
+					object = object,
+					order = if layer then layer.DisplayOrder else 0,
+					depth = depth(object),
+					index = index,
+				})
+			end
+		end
+		table.sort(hits, function(a, b)
+			if a.order ~= b.order then
+				return a.order > b.order
+			elseif a.depth ~= b.depth then
+				return a.depth > b.depth
+			end
+			return a.index > b.index
+		end)
+		local found = {}
+		for _, hit in hits do
+			table.insert(found, hit.object)
+		end
+		return found
+	end
 	local screens = {}
 	local function screen(order: number): Mock
 		if not screens[order] then
@@ -302,6 +357,7 @@ local function harness(options: { deferredText: boolean }?): Mock
 		InputChanged = signal(),
 		WindowFocusReleased = signal(),
 		GamepadDisconnected = signal(),
+		TouchPinch = signal(),
 		TextBoxFocused = signal(),
 		TextBoxFocusReleased = signal(),
 		GetConnectedGamepads = function()
@@ -420,6 +476,7 @@ local function harness(options: { deferredText: boolean }?): Mock
 		text = text,
 		enum = roblox.Enum,
 		vide = vide,
+		screen = screen,
 	}
 	function h.mount(owner, run)
 		local result, dispose = scoped(function()
