@@ -2,7 +2,7 @@
 
 Headless UI primitives for Roblox games, built on [Vide](https://centau.github.io/vide/). Anvil owns behaviour: who gets gamepad selection, which modal is on top, how a press, a hold or a repeat fires, and when the Close button may close a screen. Your game owns every pixel and every sound.
 
-Anvil started as the interface runtime of Fragile Delivery. Version 0.1 covers modals, selection and presses. Components such as sliders, tabs and dialogs come next.
+Anvil started as the interface runtime of Fragile Delivery. Version 0.1 covers modals, selection and presses. Builders let your game supply the instances and artwork.
 
 Read the documentation at <https://website.trio-forge.workers.dev/docs/anvil/>.
 
@@ -108,6 +108,18 @@ export function Shop(props: { onBuy: () => void; onClose: () => void }) {
 - `usePress` returns `highlighted`, `pressed` and `progress` getters, and an `action` that you attach to your own `GuiButton`. Pass `hold` for a hold-to-confirm button, or `repeating` for a button that repeats while held.
 - `Modal` takes its children as a function, so the controls inside know which modal owns them.
 - The topmost modal, ranked by its `ScreenGui`'s `DisplayOrder`, owns gamepad selection and blocks presses underneath. Use `modalOpen()` to pause gameplay while any modal is open.
+
+## Interaction attributes
+
+Every press action writes boolean `Highlighted`, `Pressed`, and `Disabled` attributes immediately and updates them reactively. Import the frozen `Attribute` names to read them in your styling engine.
+
+```ts
+import { Attribute } from "@trioforge/anvil";
+
+export function isHighlighted(button: GuiButton) {
+	return button.GetAttribute(Attribute.Highlighted) === true;
+}
+```
 
 ## License
 

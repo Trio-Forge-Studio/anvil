@@ -3,6 +3,7 @@ import { cleanup, derive, effect, read, source, untrack } from "@rbxts/vide";
 import { useAtom } from "@rbxts/vide-charm";
 import { heartbeat } from "./frame-loop";
 import { adapter } from "./adapter";
+import { Attribute } from "./attributes";
 import { menuOpen, textEditing, useSelection } from "./runtime";
 import { idlePress, transition, type PressEvent, type PressMode, type PressState } from "./press-state";
 import type { Value } from "./props";
@@ -16,7 +17,13 @@ export type PressOptions = PressTiming & {
 	selectFirst?: Value<boolean>;
 	silent?: boolean;
 };
-export function usePress(options: PressOptions) {
+export interface PressBinding {
+	highlighted: () => boolean;
+	pressed: () => boolean;
+	progress: () => number;
+	action: (instance: GuiButton) => void;
+}
+export function usePress(options: PressOptions): PressBinding {
 	const host = adapter();
 	const device = useAtom(host.device);
 	const menu = useAtom(menuOpen);
@@ -99,6 +106,9 @@ export function usePress(options: PressOptions) {
 		progress: () => state().progress,
 		action: (instance: GuiButton) => {
 			selection.action(instance);
+			effect(() => instance.SetAttribute(Attribute.Highlighted, highlighted()));
+			effect(() => instance.SetAttribute(Attribute.Pressed, pressed()));
+			effect(() => instance.SetAttribute(Attribute.Disabled, read(options.disabled ?? false)));
 			cleanup(
 				instance.Activated.Connect(() => {
 					if (!timedPress && mode().kind === "Activate") fire();

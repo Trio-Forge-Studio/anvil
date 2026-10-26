@@ -1,6 +1,7 @@
 export { installAnvil, type AnvilAdapter, type CloseInput, type InputDevice, type PressFeedback } from "./adapter";
 export { Modal, modalOpen, useModalActive, useTextEditing, type ModalProps } from "./modal";
 export { closeFallbackContext, startMenuRuntime, useSelection } from "./runtime";
-export { usePress, type PressOptions, type PressTiming } from "./use-press";
+export { usePress, type PressBinding, type PressOptions, type PressTiming } from "./use-press";
+export { Attribute } from "./attributes";
 export { heartbeat, preRender, type FrameListener } from "./frame-loop";
 export type { Children, ChildFactory, Getter, Placement, Value } from "./props";

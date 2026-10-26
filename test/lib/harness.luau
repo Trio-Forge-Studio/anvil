@@ -113,6 +113,13 @@ local function harness(): Mock
 		}
 		local signals: Mock = {}
 		local methods: Mock = {}
+		local attributes: Mock = {}
+		function methods.SetAttribute(_self, name, value)
+			attributes[name] = value
+		end
+		function methods.GetAttribute(_self, name)
+			return attributes[name]
+		end
 		function methods.GetPropertyChangedSignal(_self, name)
 			if not signals[name] then
 				signals[name] = signal()
