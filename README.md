@@ -160,7 +160,7 @@ export function SettingsTabs() {
 
 `useSlider` clamps values to `min` and `max` and snaps to `step` from `min`. The defaults are `min = 0` and `step = 1`. The maximum remains reachable when the range has a partial final step. The caller owns the value and updates it through `onChange`.
 
-Decrement and increment repeat while held. A changed hold calls `onCommit` once on release, including when reaching a bound cancels the pressed state. `set` and segment presses change and commit immediately. Disabled controls and unchanged values produce no change or commit. A segment writes `Selected` when its snapped value is at or below the current value. Create each segment binding in its own Vide scope.
+Decrement and increment repeat while held. A changed hold calls `onCommit` once when it ends, whether the input lifts, the pointer leaves, the step reaches its bound, or the slider unmounts. `set` and segment presses change and commit immediately. Disabled controls and unchanged values produce no change or commit. A segment writes `Selected` when its snapped value is at or below the current value. Create each segment binding in its own Vide scope.
 
 ```tsx
 import Vide, { source } from "@rbxts/vide";
@@ -177,8 +177,6 @@ export function Volume() {
 	</frame>;
 }
 ```
-
-`usePress` also accepts `onRelease`. It runs once when the input that began the press ends, even if the pressed state was cancelled earlier. Disposing the control disconnects the release listener.
 
 ## Text field
 
