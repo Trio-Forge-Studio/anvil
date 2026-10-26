@@ -2,7 +2,7 @@
 
 Headless UI primitives for Roblox games, built on [Vide](https://centau.github.io/vide/). Anvil owns behaviour: who gets gamepad selection, which modal is on top, how a press, a hold or a repeat fires, and when the Close button may close a screen. Your game owns every pixel and every sound.
 
-Anvil started as the interface runtime of Fragile Delivery. It provides modals, selection, presses, and component builders. Builders let your game supply the instances and artwork.
+Anvil started as the interface runtime of Fragile Delivery. It provides focus scopes, selection, presses, hooks and compound parts. Your game supplies the instances and artwork.
 
 Read the documentation at <https://website.trio-forge.workers.dev/docs/anvil/>.
 
@@ -114,6 +114,141 @@ export function Shop(props: { onBuy: () => void; onClose: () => void }) {
 - When a scope closes while it holds selection, it selects the control that was selected when it opened. If that control is gone, hidden or disabled, the scope underneath picks its own best control instead. Pass `restoreFocus={false}` to skip this.
 - A scope without `trapped` only restores selection when it unmounts while holding it, for example a panel that swaps content.
 
+## Parts
+
+Parts are the compound layer over the hooks later in this README. Each primitive is an object of parts, such as `Tabs.Root` and `Tabs.Trigger`, and each part wraps the matching hook, so the behaviour is the same whichever layer you use.
+
+| Primitive | Parts | Built on |
+| --- | --- | --- |
+| `Tabs` | `Root`, `List`, `Trigger`, `Content` | `useTabs` |
+| `Dialog` | `Root`, `Trigger`, `Content`, `Close` | `FocusScope` |
+| `AlertDialog` | `Root`, `Content`, `Action`, `Cancel` | `FocusScope` |
+| `Checkbox` | `Root`, `Indicator` | `useToggle` |
+| `Switch` | `Root`, `Thumb` | `useToggle` |
+| `Slider` | `Root`, `Track`, `Range`, `Thumb` | `useSlider` |
+| `TextField` | `Root`, `Input` | `useTextField` |
+| `Topbar` | `Root`, `Icon` | `useTopbarIcon` |
+
+- Vide builds JSX children before their parent, so a root cannot give context to children written inside its tags. Each `Root` except `Topbar.Root` takes its children as a function instead. It sets up the context, then calls the function with the hook's binding. Parts at any depth inside that function read the context. A part rendered outside its root raises an error that names both, such as `Tabs.Trigger must be used inside Tabs.Root`.
+- `Tabs.Content`, `Dialog.Content` and `AlertDialog.Content` also take a children function. It runs each time the content mounts.
+- A part renders one host, a `textbutton`, `frame` or `textbox`, with Roblox's visible defaults turned off. The text is empty, `AutoButtonColor` is off, and the background is transparent with no border. Parts set no colours or sizes, except that dialog content fills its parent so it can hold selection. Other properties and events pass through to the host and are type-checked against its class.
+- Every part except the roots of `Tabs`, `Dialog`, `AlertDialog` and `Topbar` takes `asChild`. The part then renders nothing of its own and gives its behaviour to your element. The children must resolve to exactly one `GuiObject`. UI modifiers beside it, such as `uicorner`, `uipadding`, `uilistlayout` or `uistroke`, move under it. Anything else raises an error. The part connects its own handlers, so handlers already on your element keep running.
+- Parts write only these properties on their host: `Selectable`, `NextSelectionUp`, `NextSelectionDown`, `NextSelectionLeft`, `NextSelectionRight`, `SelectionImageObject` and the Anvil attributes. Dialog content also writes `SelectionGroup` and the four `SelectionBehavior` properties. A few parts draw state: `Checkbox.Indicator` writes `Visible`, `Slider.Range` writes `Size`, `Slider.Thumb` writes `Position`, and `TextField.Input` writes `Text`, `TextEditable` and `ClearTextOnFocus`. In Studio, an `asChild` control warns when your element already sets one of the selection properties.
+
+### Tabs
+
+`Tabs.Root` takes `value`, `defaultValue`, `onValueChange` and `disabled`, like `useTabs`. Triggers register in the order they render. While a trigger is selected, its `NextSelection` links on the root's `orientation` point at the next and previous enabled triggers, so the D-pad, thumbstick and arrow keys move along the list through Roblox's own navigation. Movement wraps unless `loop` is `false`. Selecting a trigger with the gamepad activates it. `Tabs.Content` mounts while its value is active.
+
+```tsx
+import Vide from "@rbxts/vide";
+import { Tabs } from "@trioforge/anvil";
+
+type Page = "General" | "Audio";
+
+function Trigger(props: { value: Page }) {
+	return (
+		<Tabs.Trigger value={props.value} Text={props.value} Size={UDim2.fromOffset(120, 36)}>
+			<uicorner />
+		</Tabs.Trigger>
+	);
+}
+
+export function SettingsTabs() {
+	return (
+		<Tabs.Root<Page> defaultValue="General">
+			{() => (
+				<frame Size={UDim2.fromOffset(400, 300)} BackgroundTransparency={1}>
+					<Tabs.List Size={new UDim2(1, 0, 0, 36)}>
+						<uilistlayout FillDirection={Enum.FillDirection.Horizontal} />
+						<Trigger value="General" />
+						<Trigger value="Audio" />
+					</Tabs.List>
+					<Tabs.Content value="General" Position={UDim2.fromOffset(0, 44)} Size={new UDim2(1, 0, 1, -44)}>
+						{() => <textlabel Text="General settings" Size={UDim2.fromScale(1, 1)} />}
+					</Tabs.Content>
+					<Tabs.Content value="Audio" Position={UDim2.fromOffset(0, 44)} Size={new UDim2(1, 0, 1, -44)}>
+						{() => <textlabel Text="Audio settings" Size={UDim2.fromScale(1, 1)} />}
+					</Tabs.Content>
+				</frame>
+			)}
+		</Tabs.Root>
+	);
+}
+```
+
+### Dialog
+
+`Dialog.Root` takes `open`, `defaultOpen` and `onOpenChange`. `Dialog.Trigger` opens the dialog and `Dialog.Close` closes it. `Dialog.Content` is a trapped `FocusScope`, so while it is open it owns gamepad selection and close input. When it closes, it selects the trigger again. `Dialog.Close` is the content's fallback selection when nothing in it asks to be selected first. Render the content in a `ScreenGui` whose `DisplayOrder` puts it above what it covers.
+
+```tsx
+import Vide from "@rbxts/vide";
+import { Dialog } from "@trioforge/anvil";
+
+export function ControlsDialog() {
+	return (
+		<Dialog.Root>
+			{() => [
+				<Dialog.Trigger Text="Controls" Size={UDim2.fromOffset(120, 40)} />,
+				<Dialog.Content>
+					{() => (
+						<frame AnchorPoint={new Vector2(0.5, 0.5)} Position={UDim2.fromScale(0.5, 0.5)} Size={UDim2.fromOffset(320, 200)}>
+							<textlabel Text="A to select, B to go back" Size={new UDim2(1, 0, 0, 40)} />
+							<Dialog.Close asChild>
+								<textbutton Text="Done" Position={UDim2.fromOffset(100, 140)} Size={UDim2.fromOffset(120, 40)}>
+									<uicorner />
+								</textbutton>
+							</Dialog.Close>
+						</frame>
+					)}
+				</Dialog.Content>,
+			]}
+		</Dialog.Root>
+	);
+}
+```
+
+### Alert dialog
+
+`AlertDialog.Root` takes `open`, `defaultOpen` and `onOpenChange`, like `Dialog.Root`. `AlertDialog.Content` is a trapped scope that mounts while open. `AlertDialog.Action` runs its `onPress` and closes, unless `onPress` returns `false`. `AlertDialog.Cancel` closes and is the scope's fallback selection. Close input closes the dialog through `onOpenChange(false)` without running either `onPress`. Action is selected first, or Cancel when the root is `destructive`.
+
+```tsx
+import Vide from "@rbxts/vide";
+import { AlertDialog } from "@trioforge/anvil";
+
+export function DeleteDialog(props: { open: () => boolean; onOpenChange: (open: boolean) => void; onDelete: () => void }) {
+	return <AlertDialog.Root open={props.open} onOpenChange={props.onOpenChange} destructive>
+		{() => <AlertDialog.Content>
+			{() => <frame Size={UDim2.fromOffset(320, 160)}>
+				<AlertDialog.Action onPress={props.onDelete} Text="Delete" Size={UDim2.fromOffset(120, 40)} />
+				<AlertDialog.Cancel Text="Cancel" Size={UDim2.fromOffset(120, 40)} />
+			</frame>}
+		</AlertDialog.Content>}
+	</AlertDialog.Root>;
+}
+```
+
+### Checkbox, switch, slider and text field
+
+`Checkbox.Root` and `Switch.Root` take the `useToggle` options and render the button. `Checkbox.Indicator` is visible only while checked, and `Switch.Thumb` writes `Checked` so you can style it. `Slider.Root` takes the `useSlider` options and renders the selectable control. `Slider.Track` spans the range, `Slider.Range` fills it up to the value, and `Slider.Thumb` sits at the value with its `AnchorPoint` centred. `TextField.Root` takes the `useTextField` options and renders the button that starts editing, and `TextField.Input` is its `TextBox`. Each root passes its hook binding to its children function.
+
+```tsx
+import Vide from "@rbxts/vide";
+import { Slider } from "@trioforge/anvil";
+
+export function VolumeSlider(props: { onValueCommit: (volume: number) => void }) {
+	return (
+		<Slider.Root max={10} defaultValue={5} onValueCommit={props.onValueCommit} Size={new UDim2(1, 0, 0, 48)}>
+			{() => (
+				<Slider.Track Position={new UDim2(0, 12, 0.5, -4)} Size={new UDim2(1, -24, 0, 8)}>
+					<Slider.Range BackgroundTransparency={0} />
+					<Slider.Thumb Size={UDim2.fromOffset(20, 20)} BackgroundTransparency={0} />
+				</Slider.Track>
+			)}
+		</Slider.Root>
+	);
+}
+```
+
 ## Interaction attributes
 
 Every press action writes boolean `Highlighted`, `Pressed`, and `Disabled` attributes immediately and updates them reactively. The hooks below add `Checked`, `Selected`, `Dragging`, `Editing`, `Invalid` and `Notice`. Import the frozen `Attribute` names to read them in your styling engine.
@@ -155,7 +290,7 @@ export function SoundToggle(props: { onCheckedChange: (checked: boolean) => void
 
 ## Tabs
 
-Tabs are keyed by value, not position. Call `trigger(value)` inside each trigger's Vide scope. Each binding exposes `selected` and writes `Selected`. Pressing the selected trigger reports nothing. `disabled` on `useTabs` disables every trigger, and `disabled` on a trigger disables only that one.
+Tabs are keyed by value, not position. Call `trigger(value)` inside each trigger's Vide scope. Each binding exposes `selected` and writes `Selected`. Pressing the selected trigger reports nothing, and selecting a trigger with the gamepad activates it. `disabled` on `useTabs` disables every trigger, and `disabled` on a trigger disables only that one.
 
 ```tsx
 import Vide, { source } from "@rbxts/vide";
@@ -215,26 +350,6 @@ export function NameField(props: { onValueCommit: (name: string) => void }) {
 		<textbox action={field.box} />
 		<textlabel Text={() => field.completionText() ?? ""} />
 	</textbutton>;
-}
-```
-
-## Alert dialog
-
-`AlertDialog.Root` takes `open`, `defaultOpen` and `onOpenChange`, like `Dialog.Root`. `AlertDialog.Content` is a trapped scope that mounts while open. `AlertDialog.Action` runs its `onPress` and closes, unless `onPress` returns `false`. `AlertDialog.Cancel` closes and is the scope's fallback selection. Close input closes the dialog through `onOpenChange(false)` without running either `onPress`. Action is selected first, or Cancel when the root is `destructive`.
-
-```tsx
-import Vide from "@rbxts/vide";
-import { AlertDialog } from "@trioforge/anvil";
-
-export function DeleteDialog(props: { open: () => boolean; onOpenChange: (open: boolean) => void; onDelete: () => void }) {
-	return <AlertDialog.Root open={props.open} onOpenChange={props.onOpenChange} destructive>
-		{() => <AlertDialog.Content>
-			{() => <frame Size={UDim2.fromOffset(320, 160)}>
-				<AlertDialog.Action onPress={props.onDelete} Text="Delete" Size={UDim2.fromOffset(120, 40)} />
-				<AlertDialog.Cancel Text="Cancel" Size={UDim2.fromOffset(120, 40)} />
-			</frame>}
-		</AlertDialog.Content>}
-	</AlertDialog.Root>;
 }
 ```
 
