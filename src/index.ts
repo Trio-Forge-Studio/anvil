@@ -22,6 +22,9 @@ export {
 export { useSlider, type SliderBinding, type SliderOptions } from "./use-slider";
 export { useTextField, type TextFieldBinding, type TextFieldOptions } from "./use-text-field";
 export { useTopbarIcon, type TopbarIconBinding, type TopbarIconOptions } from "./use-topbar-icon";
+export { Tabs, type TabsContentProps, type TabsListProps, type TabsRootProps, type TabsTriggerProps } from "./tabs";
+export type { Orientation } from "./group";
+export type { AsChildProps, HostProps } from "./part";
 export { Topbar, type TopbarIconProps, type TopbarLabelProps, type TopbarRootProps, type TopbarSide } from "./topbar";
 export { AlertDialog, type AlertDialogProps } from "./alert-dialog";
 export type { AlertDialogBinding, DialogAction } from "./alert-dialog-state";
