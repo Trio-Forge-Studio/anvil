@@ -39,8 +39,8 @@ return {
 		local mounts = 0
 		h.mount("Base", function()
 			return h.Dialog.Root({
-				onOpenChange = function(open)
-					table.insert(reported, open)
+				onOpenChange = function(open, reason)
+					table.insert(reported, `{open}:{reason}`)
 				end,
 				children = function(dialog)
 					binding = dialog
@@ -66,18 +66,21 @@ return {
 		h.select(trigger)
 		trigger.Activated:Fire()
 		h.flush()
-		assert(binding.open() and reported[1] == true and mounts == 1, "the trigger opens the dialog")
+		assert(binding.open() and reported[1] == "true:Trigger" and mounts == 1, "the trigger opens the dialog")
 		assert(h.runtime.modalOpen() and not trigger.Selectable, "the content traps selection")
 		assert(h.gui.SelectedObject == close, "the Close part is the fallback selection over earlier controls")
 		pressB(h)
 		h.flush()
-		assert(not binding.open() and reported[2] == false, "close input closes")
+		assert(not binding.open() and reported[2] == "false:Dismiss", "close input closes as Dismiss")
 		assert(h.gui.SelectedObject == trigger, "selection returns to the trigger")
 		trigger.Activated:Fire()
 		h.flush()
 		close.Activated:Fire()
 		h.flush()
-		assert(not binding.open() and #reported == 4 and mounts == 2, "Close closes and content remounts per open")
+		assert(
+			not binding.open() and reported[4] == "false:Close" and #reported == 4 and mounts == 2,
+			"Close closes as Close and content remounts per open"
+		)
 		assert(h.gui.SelectedObject == trigger, "Close also restores the trigger")
 		h.stop()
 	end,
@@ -176,29 +179,35 @@ return {
 		assert(not h.runtime.modalOpen(), "the owner closes it")
 		h.stop()
 	end,
-	["an alert dialog selects Action first, or Cancel when destructive, and an Action can refuse"] = function()
+	["an alert dialog selects Action first, or Cancel when destructive, and reports one reason per close"] = function()
 		for _, destructive in { false, true } do
 			local h = setup()
 			local open = h.vide.source(true)
-			local allow, actions, cancels = false, 0, 0
+			local keep = true
+			local reports, presses = {}, {}
 			local action, cancel
 			h.mount("Base", function()
 				return h.AlertDialog.Root({
 					open = open,
-					onOpenChange = open,
+					onOpenChange = function(value, reason)
+						table.insert(reports, `{value}:{reason}`)
+						if not keep then
+							open(value)
+						end
+					end,
 					destructive = destructive,
 					children = function()
 						return h.AlertDialog.Content({
 							children = function()
 								cancel = h.AlertDialog.Cancel({
 									onPress = function()
-										cancels += 1
+										table.insert(presses, "Cancel")
 									end,
 								})
 								action = h.AlertDialog.Action({
 									onPress = function()
-										actions += 1
-										return allow
+										table.insert(presses, "Action")
+										return false
 									end,
 								})
 								return { cancel, action }
@@ -210,18 +219,29 @@ return {
 			h.flush()
 			assert(h.gui.SelectedObject == (if destructive then cancel else action), `destructive={destructive}`)
 			action.Activated:Fire()
-			assert(actions == 1 and open() and h.feedback[#h.feedback] == "Refused", "a refused action stays open")
-			allow = true
-			action.Activated:Fire()
-			assert(actions == 2 and not open(), "an allowed action closes")
-			open(true)
-			h.flush()
+			assert(
+				table.concat(reports, ",") == "false:Action" and open(),
+				"an Action press reports Action once and a controlled owner may keep it open"
+			)
+			assert(h.feedback[#h.feedback] == "Press" and presses[1] == "Action", "onPress runs and never refuses")
+			keep = false
+			table.clear(reports)
 			cancel.Activated:Fire()
-			assert(cancels == 1 and not open(), "Cancel runs onPress and closes")
+			assert(table.concat(reports, ",") == "false:Cancel" and not open(), "Cancel reports Cancel once")
 			open(true)
 			h.flush()
+			table.clear(reports)
+			table.clear(presses)
 			pressB(h)
-			assert(not open() and cancels == 1 and actions == 2, "close input closes without either onPress")
+			h.flush()
+			assert(table.concat(reports, ",") == "false:Dismiss" and not open(), "close input reports Dismiss")
+			assert(#presses == 0, "close input runs neither onPress")
+			open(true)
+			h.flush()
+			table.clear(reports)
+			action.Activated:Fire()
+			h.flush()
+			assert(table.concat(reports, ",") == "false:Action", "an Action that closes reports nothing else")
 			h.stop()
 		end
 	end,

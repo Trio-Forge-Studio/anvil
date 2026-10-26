@@ -1,4 +1,4 @@
-import Vide, { show } from "@rbxts/vide";
+import Vide, { show, untrack } from "@rbxts/vide";
 import { useFocusScope } from "./focus-scope";
 import { buttonHost, frameHost, partContext, type AsChildProps, type ButtonPartProps, type PartContext } from "./part";
 import type { ChildFactory, Value } from "./props";
@@ -6,43 +6,47 @@ import { closeFallbackContext, ownerContext } from "./runtime";
 import { useControllable } from "./use-controllable";
 import { usePress, type PressBinding } from "./use-press";
 
+// Dismiss is the close input, such as ButtonB, reaching the open content.
+export type DialogOpenChangeReason = "Trigger" | "Close" | "Dismiss";
+export type AlertDialogOpenChangeReason = "Action" | "Cancel" | "Dismiss";
 export interface DialogBinding {
 	open: () => boolean;
-	setOpen: (open: boolean) => void;
 }
-interface DialogContext extends DialogBinding {
+interface DialogContext<R> extends DialogBinding {
+	setOpen: (open: boolean, reason: R) => void;
 	destructive: boolean;
 }
-const dialogContext = partContext<DialogContext>("Dialog.Root");
-const alertContext = partContext<DialogContext>("AlertDialog.Root");
+const dialogContext = partContext<DialogContext<DialogOpenChangeReason>>("Dialog.Root");
+const alertContext = partContext<DialogContext<AlertDialogOpenChangeReason>>("AlertDialog.Root");
 
-export interface DialogRootProps {
+interface RootProps<R> {
 	open?: Value<boolean>;
 	defaultOpen?: boolean;
-	onOpenChange?: (open: boolean) => void;
+	onOpenChange?: (open: boolean, reason: R) => void;
 	children: (dialog: DialogBinding) => Vide.Node;
 }
-function root(context: PartContext<DialogContext>, props: DialogRootProps, destructive: boolean): Vide.Node {
-	const [open, setOpen] = useControllable({
-		value: props.open,
-		defaultValue: props.defaultOpen ?? false,
-		onChange: props.onOpenChange,
-	});
-	const dialog = { open, setOpen };
-	return context.provide({ ...dialog, destructive }, () => props.children(dialog));
+export type DialogRootProps = RootProps<DialogOpenChangeReason>;
+function root<R>(context: PartContext<DialogContext<R>>, props: RootProps<R>, destructive: boolean): Vide.Node {
+	const [open, write] = useControllable({ value: props.open, defaultValue: props.defaultOpen ?? false });
+	const setOpen = (value: boolean, reason: R) => {
+		if (value === untrack(open)) return;
+		write(value);
+		props.onOpenChange?.(value, reason);
+	};
+	return context.provide({ open, setOpen, destructive }, () => props.children({ open }));
 }
 
 export type DialogContentProps = {
 	selection?: "Native" | "Pointer";
 	restoreFocus?: boolean;
 } & AsChildProps<Frame, ChildFactory> & { children: ChildFactory };
-function content(dialog: DialogContext, props: DialogContentProps, part: string): Vide.Node {
+function content(dialog: DialogContext<"Dismiss">, props: DialogContentProps, part: string): Vide.Node {
 	return show(dialog.open, () => {
 		const scope = useFocusScope({
 			trapped: true,
 			selection: props.selection,
 			restoreFocus: props.restoreFocus,
-			onClose: () => dialog.setOpen(false),
+			onClose: () => dialog.setOpen(false, "Dismiss"),
 		});
 		return ownerContext(scope.owner, () =>
 			frameHost(props, part, ["selection", "restoreFocus"], () => props.children(), scope.root, {
@@ -57,26 +61,28 @@ export type DialogTriggerProps = DialogButtonProps & { selectFirst?: Value<boole
 function DialogTrigger(props: DialogTriggerProps): Vide.Node {
 	const dialog = dialogContext.use("Dialog.Trigger");
 	const press = usePress({
-		onPress: () => dialog.setOpen(true),
+		onPress: () => dialog.setOpen(true, "Trigger"),
 		disabled: props.disabled,
 		selectFirst: props.selectFirst,
 	});
 	return buttonHost(props, "Dialog.Trigger", ["disabled", "selectFirst"], press.action, press);
 }
 
-// Close buttons are the scope's fallback selection when nothing else is selectable.
-function closeButton(
-	props: DialogButtonProps & { onPress?: () => boolean | void },
+// Close and Cancel are the scope's fallback selection when nothing else is selectable.
+function closingButton<R>(
+	props: DialogButtonProps & { onPress?: () => void },
 	part: string,
-	dialog: DialogContext,
+	dialog: DialogContext<R>,
+	reason: R,
 	selectFirst: boolean,
+	fallback: boolean,
 ): Vide.Node {
 	let press!: PressBinding;
-	closeFallbackContext(true, () => {
+	closeFallbackContext(fallback, () => {
 		press = usePress({
 			onPress: () => {
-				if (props.onPress?.() === false) return false;
-				dialog.setOpen(false);
+				props.onPress?.();
+				dialog.setOpen(false, reason);
 			},
 			disabled: props.disabled,
 			selectFirst,
@@ -85,7 +91,8 @@ function closeButton(
 	return buttonHost(props, part, ["disabled", "onPress"], press.action, press);
 }
 function DialogClose(props: DialogButtonProps): Vide.Node {
-	return closeButton(props, "Dialog.Close", dialogContext.use("Dialog.Close"), false);
+	const dialog = dialogContext.use("Dialog.Close");
+	return closingButton(props, "Dialog.Close", dialog, "Close", false, true);
 }
 
 export const Dialog = {
@@ -95,25 +102,17 @@ export const Dialog = {
 	Close: DialogClose,
 };
 
-export interface AlertDialogRootProps extends DialogRootProps {
+export interface AlertDialogRootProps extends RootProps<AlertDialogOpenChangeReason> {
 	destructive?: boolean;
 }
-export type AlertDialogButtonProps = DialogButtonProps & { onPress?: () => boolean | void };
+export type AlertDialogButtonProps = DialogButtonProps & { onPress?: () => void };
 function AlertDialogAction(props: AlertDialogButtonProps): Vide.Node {
 	const dialog = alertContext.use("AlertDialog.Action");
-	const press = usePress({
-		onPress: () => {
-			if (props.onPress?.() === false) return false;
-			dialog.setOpen(false);
-		},
-		disabled: props.disabled,
-		selectFirst: !dialog.destructive,
-	});
-	return buttonHost(props, "AlertDialog.Action", ["disabled", "onPress"], press.action, press);
+	return closingButton(props, "AlertDialog.Action", dialog, "Action", !dialog.destructive, false);
 }
 function AlertDialogCancel(props: AlertDialogButtonProps): Vide.Node {
 	const dialog = alertContext.use("AlertDialog.Cancel");
-	return closeButton(props, "AlertDialog.Cancel", dialog, dialog.destructive);
+	return closingButton(props, "AlertDialog.Cancel", dialog, "Cancel", dialog.destructive, true);
 }
 
 export const AlertDialog = {

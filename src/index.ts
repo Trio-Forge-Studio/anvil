@@ -34,10 +34,12 @@ export {
 	AlertDialog,
 	Dialog,
 	type AlertDialogButtonProps,
+	type AlertDialogOpenChangeReason,
 	type AlertDialogRootProps,
 	type DialogBinding,
 	type DialogButtonProps,
 	type DialogContentProps,
+	type DialogOpenChangeReason,
 	type DialogRootProps,
 	type DialogTriggerProps,
 } from "./dialog";

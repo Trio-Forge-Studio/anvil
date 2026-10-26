@@ -188,7 +188,7 @@ export function SettingsTabs() {
 
 ### Dialog
 
-`Dialog.Root` takes `open`, `defaultOpen` and `onOpenChange`. `Dialog.Trigger` opens the dialog and `Dialog.Close` closes it. `Dialog.Content` is a trapped `FocusScope`, so while it is open it owns gamepad selection and close input. When it closes, it selects the trigger again. `Dialog.Close` is the content's fallback selection when nothing in it asks to be selected first. Render the content in a `ScreenGui` whose `DisplayOrder` puts it above what it covers.
+`Dialog.Root` takes `open`, `defaultOpen` and `onOpenChange`, and passes `{ open }` to its children function. `Dialog.Trigger` opens the dialog and `Dialog.Close` closes it. `onOpenChange` receives the new state and a reason: `"Trigger"`, `"Close"`, or `"Dismiss"` when close input such as ButtonB closed the content. `Dialog.Content` is a trapped `FocusScope`, so while it is open it owns gamepad selection and close input. When it closes, it selects the trigger again. `Dialog.Close` is the content's fallback selection when nothing in it asks to be selected first. Render the content in a `ScreenGui` whose `DisplayOrder` puts it above what it covers.
 
 ```tsx
 import Vide from "@rbxts/vide";
@@ -219,7 +219,7 @@ export function ControlsDialog() {
 
 ### Alert dialog
 
-`AlertDialog.Root` takes `open`, `defaultOpen` and `onOpenChange`, like `Dialog.Root`. `AlertDialog.Content` is a trapped scope that mounts while open. `AlertDialog.Action` runs its `onPress` and closes, unless `onPress` returns `false`. `AlertDialog.Cancel` closes and is the scope's fallback selection. Close input closes the dialog through `onOpenChange(false)` without running either `onPress`. Action is selected first, or Cancel when the root is `destructive`.
+`AlertDialog.Root` takes `open`, `defaultOpen` and `onOpenChange`, like `Dialog.Root`. `AlertDialog.Content` is a trapped scope that mounts while open. `AlertDialog.Action` runs its `onPress`, then closes with the reason `"Action"`. `AlertDialog.Cancel` does the same with `"Cancel"` and is the scope's fallback selection. Close input closes the dialog with `"Dismiss"` without running either `onPress`. Each close reports exactly one reason, so an Action press never also reports a Cancel or a Dismiss. To keep the dialog open after a press, pass `open` and ignore that change. Action is selected first, or Cancel when the root is `destructive`.
 
 ```tsx
 import Vide from "@rbxts/vide";
