@@ -279,6 +279,7 @@ local function harness(): Mock
 	local roots = {}
 	local disposals: { () -> () } = {}
 	local h: Mock = {
+		require = require,
 		runtime = runtime,
 		gui = gui,
 		input = input,
@@ -289,6 +290,16 @@ local function harness(): Mock
 		enum = roblox.Enum,
 		charm = Charm,
 	}
+	function h.mount(owner, run)
+		local result, dispose = scoped(function()
+			return runtime.ownerContext(owner, run)
+		end)
+		table.insert(disposals, dispose)
+		return result, dispose
+	end
+	function h.instance(class, owner)
+		return instance(class, if owner == "Base" then screen(0) else roots[owner])
+	end
 	function h.flush()
 		local count = 0
 		while #deferred > 0 do

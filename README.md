@@ -121,6 +121,41 @@ export function isHighlighted(button: GuiButton) {
 }
 ```
 
+## Toggle
+
+Call `useToggle` in a Vide scope. It reads your controlled `on` value and sends the next boolean to `onToggle`. Its action adds the reactive `Selected` attribute.
+
+```tsx
+import Vide, { source } from "@rbxts/vide";
+import { useToggle } from "@trioforge/anvil";
+
+export function SoundToggle() {
+	const on = source(true);
+	const toggle = useToggle({ on, onToggle: on });
+	return <textbutton action={toggle.action} Text={() => toggle.on() ? "Sound on" : "Sound off"} />;
+}
+```
+
+## Tabs
+
+Call `tab(index)` inside each tab's Vide scope. Each binding exposes `selected` and writes `Selected`. Pressing the selected tab leaves `onSelect` untouched.
+
+```tsx
+import Vide, { source } from "@rbxts/vide";
+import { useTabs, type TabsBinding } from "@trioforge/anvil";
+
+function Tab(props: { tabs: TabsBinding; index: number }) {
+	const tab = props.tabs.tab(props.index, { selectFirst: props.index === 1 });
+	return <textbutton action={tab.action} Text={() => tab.selected() ? "Selected" : "Choose"} />;
+}
+
+export function SettingsTabs() {
+	const selected = source(1);
+	const tabs = useTabs({ selected, onSelect: selected });
+	return <frame><Tab tabs={tabs} index={1} /><Tab tabs={tabs} index={2} /></frame>;
+}
+```
+
 ## License
 
 MIT
