@@ -365,8 +365,11 @@ local function harness(options: { deferredText: boolean }?): Mock
 		table.insert(disposals, dispose)
 		return result, dispose
 	end
+	local function parent(owner)
+		return if owner == "Base" then screen(0) elseif owner == "Topbar" then screen(12) else roots[owner]
+	end
 	function h.instance(class, owner)
-		return instance(class, if owner == "Base" then screen(0) else roots[owner])
+		return instance(class, parent(owner))
 	end
 	function h.flush()
 		local count = 0
@@ -390,7 +393,7 @@ local function harness(options: { deferredText: boolean }?): Mock
 		root.Parent = screen(order)
 	end
 	function h.control(owner, name, given, fallback, press)
-		local object = instance("TextButton", if owner == "Base" then screen(0) else roots[owner])
+		local object = instance("TextButton", parent(owner))
 		object.Name = name
 		local binding, dispose = scoped(function()
 			return runtime.ownerContext(owner, function()

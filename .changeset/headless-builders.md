@@ -2,4 +2,4 @@
 "@trioforge/anvil": minor
 ---
 
-Add reactive interaction attributes and headless toggle, tabs, slider, text field, and alert dialog builders.
+Add reactive interaction attributes and headless toggle, tabs, slider, text field, and alert dialog builders, and a top bar icon that stays pressable while a modal is open.

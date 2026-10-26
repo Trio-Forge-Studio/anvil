@@ -5,4 +5,5 @@ export const Attribute = table.freeze({
 	Selected: "Selected",
 	Editing: "Editing",
 	Invalid: "Invalid",
+	Notice: "Notice",
 } as const);

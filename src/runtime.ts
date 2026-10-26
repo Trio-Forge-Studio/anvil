@@ -7,7 +7,7 @@ import type { Value } from "./props";
 import { enter, hasModal, leave, top, type ModalState } from "./modal-state";
 import { decide, emptySelection, type Selection, type SelectionEvent } from "./selection-policy";
 
-export type Owner = number | "Base";
+export type Owner = number | "Base" | "Topbar";
 export const ownerContext = context<Owner>("Base");
 export const closeFallbackContext = context(false);
 const state = atom<ModalState<number>>({ entries: [] });
@@ -47,10 +47,13 @@ const blankSelectionImage = new Instance("Frame");
 blankSelectionImage.Name = "SelectionImage";
 blankSelectionImage.BackgroundTransparency = 1;
 
+// The top bar draws above every modal, so its icons must stay pressable to close the modal they opened.
 export function active(owner: Owner): boolean {
+	if (owner === "Topbar") return true;
 	return owner === "Base" ? !modalOpen() : topId() === owner;
 }
 function native(owner: Owner): boolean {
+	if (owner === "Topbar") return !modalOpen();
 	return active(owner) && (owner === "Base" || roots.get(owner)?.mode === "Native");
 }
 function finite(value: number): boolean {
@@ -126,7 +129,7 @@ function canSelect(owner: Owner): boolean {
 function request(owner: Owner, target: GuiObject | "Root"): void {
 	cancelRequest();
 	const token = generation;
-	const object = target === "Root" ? (owner === "Base" ? undefined : roots.get(owner)?.root) : target;
+	const object = target === "Root" ? (typeIs(owner, "number") ? roots.get(owner)?.root : undefined) : target;
 	if (!object) return;
 	let queued = false;
 	const retry = () => {
