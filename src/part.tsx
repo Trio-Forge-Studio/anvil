@@ -57,7 +57,6 @@ function collect(node: unknown, into: Instance[], part: string): void {
 	else error(`${part} asChild needs instances, not a ${typeOf(node)}`, 4);
 }
 
-// Resolves asChild children to the single GuiObject that takes the part's behaviour. UI modifiers beside it move under it.
 export function slot<T extends GuiObject>(
 	children: Vide.Node,
 	part: string,
@@ -85,7 +84,6 @@ export function slot<T extends GuiObject>(
 	return host as T;
 }
 
-// Every part renders one host with Roblox's visible defaults neutralised; the game's props win over them.
 export function buttonHost(
 	props: AsChildProps<TextButton, unknown>,
 	part: string,
