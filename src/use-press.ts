@@ -12,7 +12,6 @@ export type PressTiming = { hold?: Value<number | undefined>; repeating?: never 
 export type PressOptions = PressTiming & {
 	onPress: () => boolean | void;
 	onPressedChange?: (pressed: boolean) => void;
-	onRelease?: () => void;
 	onHighlightChange?: (highlighted: boolean) => void;
 	disabled?: Value<boolean>;
 	selectFirst?: Value<boolean>;
@@ -32,7 +31,6 @@ export function usePress(options: PressOptions): PressBinding {
 	const hovered = source(false);
 	const state = source<PressState<InputObject>>(idlePress());
 	let timedPress = false;
-	let releaseSource: InputObject | undefined;
 	const mode = (): PressMode => {
 		const hold = read(options.hold);
 		if (hold !== undefined) {
@@ -55,26 +53,20 @@ export function usePress(options: PressOptions): PressBinding {
 			if ((before.source === undefined) !== (result.state.source === undefined))
 				options.onPressedChange?.(result.state.source !== undefined);
 			if (result.fire) fire();
-			if (event.kind === "End" && event.source === releaseSource) {
-				releaseSource = undefined;
-				options.onRelease?.();
-			}
 		});
 	const begin = (input: InputObject) =>
 		untrack(() => {
-			if (!selection.allowed() || menu() || editing() || releaseSource !== undefined) return;
+			if (!selection.allowed() || menu() || editing()) return;
 			if (state().source === undefined) timedPress = mode().kind !== "Activate";
 			if (read(options.disabled ?? false)) {
 				if (!options.silent && mode().kind !== "Activate") host.feedback("Refused");
 				return;
 			}
-			releaseSource = input;
 			update({ kind: "Begin", source: input });
 		});
 	const selection = useSelection({
 		selectFirst: options.selectFirst,
-		buttonADown:
-			options.hold !== undefined || options.repeating || options.onRelease !== undefined ? begin : undefined,
+		buttonADown: options.hold !== undefined || options.repeating ? begin : undefined,
 		buttonAUp: (input) => update({ kind: "End", source: input }),
 	});
 	const highlighted = derive(() => device() !== "Touch" && (hovered() || selection.selected()));

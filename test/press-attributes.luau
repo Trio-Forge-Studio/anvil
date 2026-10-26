@@ -7,35 +7,6 @@ return {
 		end
 		assert(table.isfrozen(names), "attribute contract cannot be mutated")
 	end,
-	["press release follows its input after cancellation and works for gamepad activation"] = function()
-		local h = harness()
-		local releases = 0
-		local disabled = h.charm.atom(false)
-		local button, dispose = h.press("Base", "Release", {
-			disabled = disabled,
-			onPress = function() end,
-			onRelease = function()
-				releases += 1
-			end,
-		})
-		h.select(button)
-		local input = h.begin(h.enum.KeyCode.ButtonA)
-		assert(button:GetAttribute("Pressed") == true, "gamepad activation tracks pressed")
-		disabled(true)
-		assert(button:GetAttribute("Pressed") == false and releases == 0, "cancelling state does not release input")
-		h.finish(input)
-		h.finish(input)
-		assert(releases == 1, "matching release fires once")
-		disabled(false)
-		local pointer = { UserInputType = h.enum.UserInputType.Touch }
-		button.InputBegan:Fire(pointer)
-		h.input.InputEnded:Fire({ UserInputType = h.enum.UserInputType.Touch })
-		assert(releases == 1, "another input cannot release this press")
-		dispose()
-		h.input.InputEnded:Fire(pointer)
-		assert(releases == 1, "disposal disconnects pending release")
-		h.stop()
-	end,
 	["press attributes start false and follow hover press and disabled"] = function()
 		local h = harness()
 		h.device("Keyboard")

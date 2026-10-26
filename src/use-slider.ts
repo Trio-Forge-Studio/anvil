@@ -55,9 +55,7 @@ export function useSlider(options: SliderOptions): SliderBinding {
 				change(value() + direction * range.step, hold);
 			},
 			onPressedChange: (down) => {
-				if (down) hold.begin();
-			},
-			onRelease: () => {
+				if (down) return hold.begin();
 				const committed = hold.release();
 				if (committed !== undefined) options.onCommit?.(committed);
 			},

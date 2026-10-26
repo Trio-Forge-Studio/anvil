@@ -33,7 +33,7 @@ return {
 		assert(calls == 0, "fixed range never changes or commits")
 		h.stop()
 	end,
-	["slider repeats commits on release at a bound and guards disabled controls"] = function()
+	["slider commits a hold once when it ends at a bound and guards disabled controls"] = function()
 		local h = harness()
 		local owner = h.root(10)
 		local value = h.charm.atom(1)
@@ -69,14 +69,12 @@ return {
 		assert(value() == 2 and #commits == 0, "hold changes immediately without commit")
 		h.tick(0.4)
 		assert(value() == 3 and slider.atMax() and plus:GetAttribute("Disabled") == true, "repeat reaches max")
-		assert(#commits == 0, "bound cancellation must wait for release")
+		assert(#commits == 1 and commits[1] == 3, "reaching the bound ends the hold and commits once")
 		assert(segment:GetAttribute("Selected") == true, "segment reacts to stepped value")
 		h.tick(1)
 		assert(#changes == 2, "disabled endpoint cannot repeat")
 		h.finish(input)
-		assert(#commits == 1 and commits[1] == 3, "one commit on physical release")
-		h.finish(input)
-		assert(#commits == 1, "duplicate release is harmless")
+		assert(#commits == 1, "the later physical release does not commit again")
 		input = h.begin(h.enum.KeyCode.ButtonA)
 		h.finish(input)
 		assert(#changes == 2 and #commits == 1, "unchanged disabled hold does not commit")
@@ -91,6 +89,36 @@ return {
 		slider.set(1)
 		segment.Activated:Fire()
 		assert(value() == 2 and #commits == 3, "disabled set and segment cannot change")
+		h.stop()
+	end,
+	["slider commits a changed hold when the pointer leaves or the slider unmounts"] = function()
+		local h = harness()
+		local value = h.charm.atom(0)
+		local commits = {}
+		local plus = h.instance("TextButton", "Base")
+		local _, dispose = h.mount("Base", function()
+			local binding = h.require("use-slider").useSlider({
+				value = value,
+				max = 9,
+				onChange = function(next)
+					value(next)
+				end,
+				onCommit = function(next)
+					table.insert(commits, next)
+				end,
+			})
+			binding.increment.action(plus)
+			return binding
+		end)
+		local pointer = { UserInputType = h.enum.UserInputType.MouseButton1 }
+		plus.InputBegan:Fire(pointer)
+		plus.MouseLeave:Fire()
+		assert(#commits == 1 and commits[1] == 1, "leaving mid-hold commits the change")
+		h.input.InputEnded:Fire(pointer)
+		assert(#commits == 1, "release after leaving does not commit again")
+		plus.InputBegan:Fire(pointer)
+		dispose()
+		assert(#commits == 2 and commits[2] == 2, "unmounting mid-hold commits the change")
 		h.stop()
 	end,
 	["slider pointer hold snaps fractional ranges and commits only changed holds"] = function()
