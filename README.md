@@ -156,6 +156,30 @@ export function SettingsTabs() {
 }
 ```
 
+## Slider
+
+`useSlider` clamps values to `min` and `max` and snaps to `step` from `min`. The defaults are `min = 0` and `step = 1`. The maximum remains reachable when the range has a partial final step. The caller owns the value and updates it through `onChange`.
+
+Decrement and increment repeat while held. A changed hold calls `onCommit` once on release, including when reaching a bound cancels the pressed state. `set` and segment presses change and commit immediately. Disabled controls and unchanged values produce no change or commit. A segment writes `Selected` when its snapped value is at or below the current value. Create each segment binding in its own Vide scope.
+
+```tsx
+import Vide, { source } from "@rbxts/vide";
+import { useSlider } from "@trioforge/anvil";
+
+export function Volume() {
+	const value = source(5);
+	const slider = useSlider({ value, max: 10, onChange: value, selectFirst: true });
+	const middle = slider.segment(5);
+	return <frame>
+		<textbutton action={slider.decrement.action} Text="-" />
+		<textbutton action={middle.action} Text={() => tostring(slider.value())} />
+		<textbutton action={slider.increment.action} Text="+" />
+	</frame>;
+}
+```
+
+`usePress` also accepts `onRelease`. It runs once when the input that began the press ends, even if the pressed state was cancelled earlier. Disposing the control disconnects the release listener.
+
 ## License
 
 MIT

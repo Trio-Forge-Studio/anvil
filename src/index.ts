@@ -5,5 +5,6 @@ export { usePress, type PressBinding, type PressOptions, type PressTiming } from
 export { Attribute } from "./attributes";
 export { useToggle, type ToggleBinding, type ToggleOptions } from "./use-toggle";
 export { useTabs, type TabBinding, type TabOptions, type TabsBinding, type TabsOptions } from "./use-tabs";
+export { useSlider, type SliderBinding, type SliderOptions } from "./use-slider";
 export { heartbeat, preRender, type FrameListener } from "./frame-loop";
 export type { Children, ChildFactory, Getter, Placement, Value } from "./props";
