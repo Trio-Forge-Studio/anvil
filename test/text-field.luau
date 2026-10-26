@@ -1,5 +1,31 @@
 local harness = require("./lib/harness")
 return {
+	["uncontrolled text field owns its value from defaultValue and still reports"] = function()
+		local h = harness()
+		local changes, commits = {}, {}
+		local box = h.instance("TextBox", "Base")
+		local binding = h.mount("Base", function()
+			local binding = h.require("use-text-field").useTextField({
+				defaultValue = "hi",
+				onValueChange = function(value)
+					table.insert(changes, value)
+				end,
+				onValueCommit = function(value)
+					table.insert(commits, value)
+				end,
+			})
+			binding.box(box)
+			return binding
+		end)
+		assert(box.Text == "hi" and binding.value() == "hi", "defaultValue seeds the box")
+		box:CaptureFocus()
+		box.Text = "hey"
+		assert(binding.value() == "hey" and changes[1] == "hey", "typing updates the owned value")
+		box:ReleaseFocus(false)
+		h.flush()
+		assert(#changes == 1 and commits[1] == "hey", "blur commits without repeating the change")
+		h.stop()
+	end,
 	["text field does not echo controlled writes when Text signals are deferred"] = function()
 		local h = harness({ deferredText = true })
 		local text = h.vide.source("a")
@@ -7,9 +33,9 @@ return {
 		local box = h.instance("TextBox", "Base")
 		h.mount("Base", function()
 			local binding = h.require("use-text-field").useTextField({
-				text = text,
+				value = text,
 				maxLength = 3,
-				onChange = function(value)
+				onValueChange = function(value)
 					table.insert(changes, value)
 				end,
 			})
@@ -32,12 +58,12 @@ return {
 		local box = h.instance("TextBox", "Base")
 		h.mount("Base", function()
 			local binding = h.require("use-text-field").useTextField({
-				text = "a",
+				value = "a",
 				maxLength = 3,
-				onChange = function(text)
+				onValueChange = function(text)
 					table.insert(changes, text)
 				end,
-				onCommit = function(text)
+				onValueCommit = function(text)
 					table.insert(commits, text)
 				end,
 			})
@@ -64,13 +90,13 @@ return {
 		local box = h.instance("TextBox", owner)
 		local binding = h.mount(owner, function()
 			local binding = h.require("use-text-field").useTextField({
-				text = text,
+				value = text,
 				completion = completion,
 				disabled = disabled,
 				invalid = invalid,
 				maxLength = 4,
 				selectFirst = true,
-				onChange = function(value)
+				onValueChange = function(value)
 					table.insert(changes, value)
 					table.insert(events, "change")
 					text(value)
@@ -79,12 +105,12 @@ return {
 					table.insert(submissions, value)
 					table.insert(events, "submit")
 				end,
-				onCommit = function(value)
+				onValueCommit = function(value)
 					table.insert(commits, value)
 					table.insert(events, "commit")
 				end,
 			})
-			binding.field(field)
+			binding.control(field)
 			binding.box(box)
 			return binding
 		end)
@@ -140,8 +166,7 @@ return {
 		local disabled = h.vide.source(false)
 		local box = h.instance("TextBox", "Base")
 		local _, dispose = h.mount("Base", function()
-			local binding = h.require("use-text-field")
-				.useTextField({ text = "", onChange = function() end, autoFocus = true })
+			local binding = h.require("use-text-field").useTextField({ autoFocus = true })
 			binding.box(box)
 		end)
 		assert(not box:IsFocused(), "autofocus is deferred")
@@ -150,8 +175,6 @@ return {
 		assert(not box:IsFocused(), "disposed field never captures focus")
 		local _, remove = h.mount("Base", function()
 			local binding = h.require("use-text-field").useTextField({
-				text = "",
-				onChange = function() end,
 				autoFocus = true,
 				disabled = disabled,
 			})
@@ -163,8 +186,7 @@ return {
 		remove()
 		disabled(false)
 		local _, release = h.mount("Base", function()
-			local binding = h.require("use-text-field")
-				.useTextField({ text = "", onChange = function() end, autoFocus = true })
+			local binding = h.require("use-text-field").useTextField({ autoFocus = true })
 			binding.box(box)
 		end)
 		h.flush()

@@ -3,13 +3,15 @@ import { Attribute } from "./attributes";
 import { useModalActive } from "./modal";
 import type { Value } from "./props";
 import { completionText, limitText, validateMaxLength } from "./text-field-state";
+import { useControllable } from "./use-controllable";
 import { usePress } from "./use-press";
 
 export interface TextFieldOptions {
-	text: Value<string>;
-	onChange: (text: string) => void;
-	onSubmit?: (text: string) => void;
-	onCommit?: (text: string) => void;
+	value?: Value<string>;
+	defaultValue?: string;
+	onValueChange?: (value: string) => void;
+	onSubmit?: (value: string) => void;
+	onValueCommit?: (value: string) => void;
 	completion?: Value<string | undefined>;
 	maxLength?: number;
 	autoFocus?: boolean;
@@ -18,15 +20,21 @@ export interface TextFieldOptions {
 	selectFirst?: Value<boolean>;
 }
 export interface TextFieldBinding {
+	value: () => string;
 	editing: () => boolean;
 	highlighted: () => boolean;
 	pressed: () => boolean;
 	completionText: () => string | undefined;
-	field: (instance: GuiButton) => void;
+	control: (instance: GuiButton) => void;
 	box: (instance: TextBox) => void;
 }
 export function useTextField(options: TextFieldOptions): TextFieldBinding {
 	validateMaxLength(options.maxLength);
+	const [value, setValue] = useControllable({
+		value: options.value,
+		defaultValue: options.defaultValue ?? "",
+		onChange: options.onValueChange,
+	});
 	const editing = source(false);
 	const active = useModalActive();
 	const disabled = () => read(options.disabled ?? false);
@@ -40,11 +48,12 @@ export function useTextField(options: TextFieldOptions): TextFieldBinding {
 	};
 	const press = usePress({ onPress: capture, disabled, selectFirst: options.selectFirst });
 	return {
+		value,
 		editing,
 		highlighted: press.highlighted,
 		pressed: press.pressed,
-		completionText: () => completionText(read(options.text), read(options.completion)),
-		field: (instance) => {
+		completionText: () => completionText(value(), read(options.completion)),
+		control: (instance) => {
 			press.action(instance);
 			effect(() => instance.SetAttribute(Attribute.Editing, editing()));
 			effect(() => instance.SetAttribute(Attribute.Invalid, read(options.invalid ?? false)));
@@ -52,7 +61,7 @@ export function useTextField(options: TextFieldOptions): TextFieldBinding {
 		box: (instance) => {
 			box = instance;
 			let attached = true;
-			let currentText = read(options.text);
+			let currentText = value();
 			const write = (text: string) => {
 				currentText = text;
 				instance.Text = text;
@@ -62,19 +71,19 @@ export function useTextField(options: TextFieldOptions): TextFieldBinding {
 			effect(() => {
 				instance.TextEditable = !disabled();
 			});
-			effect(() => write(read(options.text)));
+			effect(() => write(value()));
 			cleanup(
 				instance.GetPropertyChangedSignal("Text").Connect(() => {
 					if (!attached || instance.Text === currentText) return;
 					if (disabled()) {
-						write(read(options.text));
+						write(value());
 						return;
 					}
 					const previous = currentText;
 					const text = limitText(instance.Text, options.maxLength);
 					currentText = text;
 					if (text !== instance.Text) write(text);
-					if (text !== previous) options.onChange(text);
+					if (text !== previous) setValue(text);
 				}),
 			);
 			cleanup(instance.Focused.Connect(() => editing(true)));
@@ -89,9 +98,9 @@ export function useTextField(options: TextFieldOptions): TextFieldBinding {
 						options.maxLength,
 					);
 					write(text);
-					if (text !== previous) options.onChange(text);
+					if (text !== previous) setValue(text);
 					if (enterPressed) options.onSubmit?.(text);
-					options.onCommit?.(text);
+					options.onValueCommit?.(text);
 				}),
 			);
 			cleanup(() => {

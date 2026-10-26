@@ -193,18 +193,17 @@ export function Volume() {
 
 ## Text field
 
-Attach `field` to your `GuiButton` and `box` to its `TextBox`. The field captures focus and writes `Editing` and `Invalid` alongside the press attributes. The box stays outside gamepad selection and uses the existing text editing runtime to release menu input while focused.
+Attach `control` to your `GuiButton` and `box` to its `TextBox`. The control captures focus and writes `Editing` and `Invalid` alongside the press attributes. The box stays outside gamepad selection and uses the existing text editing runtime to release menu input while focused.
 
-`completionText` preserves typed text and appends the untyped completion suffix. Enter accepts the completion before `onSubmit` and `onCommit`. A blur always commits. `maxLength` limits input and submitted completions in bytes, matching Luau string slicing. Controlled text updates do not call `onChange`. Deferred `autoFocus` checks that the binding is still alive, enabled, and in the active modal.
+The text is controllable through `value`, `defaultValue` and `onValueChange`. Writing a controlled `value` never calls `onValueChange`. `completionText` preserves typed text and appends the untyped completion suffix. Enter accepts the completion before `onSubmit` and `onValueCommit`. A blur always calls `onValueCommit`. `maxLength` limits input and submitted completions in bytes, matching Luau string slicing. Deferred `autoFocus` checks that the binding is still alive, enabled, and in the active modal.
 
 ```tsx
-import Vide, { source } from "@rbxts/vide";
+import Vide from "@rbxts/vide";
 import { useTextField } from "@trioforge/anvil";
 
-export function NameField() {
-	const text = source("");
-	const field = useTextField({ text, onChange: text, maxLength: 24, selectFirst: true });
-	return <textbutton action={field.field} Text="">
+export function NameField(props: { onValueCommit: (name: string) => void }) {
+	const field = useTextField({ maxLength: 24, selectFirst: true, onValueCommit: props.onValueCommit });
+	return <textbutton action={field.control} Text="">
 		<textbox action={field.box} />
 		<textlabel Text={() => field.completionText() ?? ""} />
 	</textbutton>;
