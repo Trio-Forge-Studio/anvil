@@ -1,156 +1,225 @@
 local harness = require("./lib/harness")
+local roblox: any = require("@lune/roblox")
+local Enum = roblox.Enum
+local function slider(h, given)
+	local control = h.instance("TextButton", "Base")
+	local track = h.instance("Frame", "Base")
+	track.Parent = control
+	track.AbsolutePosition = roblox.Vector2.new(100, 0)
+	track.AbsoluteSize = roblox.Vector2.new(200, 20)
+	local binding, dispose = h.mount("Base", function()
+		local result = h.require("use-slider").useSlider(given)
+		result.control(control)
+		result.track(track)
+		return result
+	end)
+	return control, track, binding, dispose
+end
+local function pointer(kind, x)
+	return { UserInputType = Enum.UserInputType[kind], Position = roblox.Vector3.new(x, 0, 0) }
+end
 return {
-	["slider with equal bounds has no steps and a finite fraction"] = function()
+	["slider drags with the mouse and commits the final value once on release"] = function()
 		local h = harness()
-		local calls = 0
-		local minus = h.instance("TextButton", "Base")
-		local plus = h.instance("TextButton", "Base")
-		local slider = h.mount("Base", function()
-			local binding = h.require("use-slider").useSlider({
-				value = 20,
-				min = 4,
-				max = 4,
-				onChange = function()
-					calls += 1
-				end,
-				onCommit = function()
-					calls += 1
-				end,
-			})
-			binding.decrement.action(minus)
-			binding.increment.action(plus)
-			return binding
-		end)
-		assert(
-			slider.value() == 4 and slider.fraction() == 0 and slider.atMin() and slider.atMax(),
-			"fixed range is normalized"
-		)
-		assert(
-			minus:GetAttribute("Disabled") == true and plus:GetAttribute("Disabled") == true,
-			"both endpoints disabled initially"
-		)
-		slider.set(9)
-		assert(calls == 0, "fixed range never changes or commits")
-		h.stop()
-	end,
-	["slider commits a hold once when it ends at a bound and guards disabled controls"] = function()
-		local h = harness()
-		local owner = h.root(10)
-		local value = h.vide.source(1)
-		local disabled = h.vide.source(false)
+		h.device("Keyboard")
 		local changes, commits = {}, {}
-		local minus = h.instance("TextButton", owner)
-		local plus = h.instance("TextButton", owner)
-		local segment = h.instance("TextButton", owner)
-		local slider = h.mount(owner, function()
-			local binding = h.require("use-slider").useSlider({
-				value = value,
-				max = 3,
-				disabled = disabled,
-				selectFirst = true,
-				onChange = function(next)
-					table.insert(changes, next)
-					value(next)
-				end,
-				onCommit = function(next)
-					table.insert(commits, next)
-				end,
-			})
-			binding.decrement.action(minus)
-			binding.increment.action(plus)
-			binding.segment(2).action(segment)
-			return binding
-		end)
-		h.flush()
-		assert(h.gui.SelectedObject == minus, "decrement receives initial selection")
-		assert(slider.fraction() == 1 / 3 and segment:GetAttribute("Selected") == false, "initial fraction and segment")
-		h.select(plus)
-		local input = h.begin(h.enum.KeyCode.ButtonA)
-		assert(value() == 2 and #commits == 0, "hold changes immediately without commit")
-		h.tick(0.4)
-		assert(value() == 3 and slider.atMax() and plus:GetAttribute("Disabled") == true, "repeat reaches max")
-		assert(#commits == 1 and commits[1] == 3, "reaching the bound ends the hold and commits once")
-		assert(segment:GetAttribute("Selected") == true, "segment reacts to stepped value")
-		h.tick(1)
-		assert(#changes == 2, "disabled endpoint cannot repeat")
-		h.finish(input)
-		assert(#commits == 1, "the later physical release does not commit again")
-		input = h.begin(h.enum.KeyCode.ButtonA)
-		h.finish(input)
-		assert(#changes == 2 and #commits == 1, "unchanged disabled hold does not commit")
-		slider.set(-9)
-		assert(slider.atMin() and minus:GetAttribute("Disabled") == true and commits[2] == 0, "set clamps and commits")
-		slider.set(0)
-		assert(#commits == 2, "unchanged set does not commit")
-		segment.Activated:Fire()
-		assert(value() == 2 and commits[3] == 2, "segment changes and commits immediately")
-		disabled(true)
-		assert(plus:GetAttribute("Disabled") == true and segment:GetAttribute("Disabled") == true, "global disable")
-		slider.set(1)
-		segment.Activated:Fire()
-		assert(value() == 2 and #commits == 3, "disabled set and segment cannot change")
+		local control, _, binding = slider(h, {
+			max = 10,
+			onValueChange = function(value)
+				table.insert(changes, value)
+			end,
+			onValueCommit = function(value)
+				table.insert(commits, value)
+			end,
+		})
+		local mouse = pointer("MouseButton1", 160)
+		control.InputBegan:Fire(mouse)
+		assert(binding.value() == 3 and changes[1] == 3, "a press jumps to the snapped pointer value")
+		assert(binding.dragging() and control:GetAttribute("Dragging") == true, "a press starts a drag")
+		assert(control:GetAttribute("Highlighted") == true, "dragging highlights")
+		h.input.InputChanged:Fire(pointer("MouseMovement", 400))
+		assert(binding.value() == 10 and binding.fraction() == 1, "moving past the track clamps to max")
+		assert(#commits == 0, "nothing commits mid-drag")
+		h.input.InputEnded:Fire(mouse)
+		assert(#changes == 2 and #commits == 1 and commits[1] == 10, "release commits the final value once")
+		assert(not binding.dragging() and control:GetAttribute("Dragging") == false, "release ends the drag")
+		h.input.InputEnded:Fire(mouse)
+		assert(#commits == 1, "a second release does nothing")
+		local still = pointer("MouseButton1", 300)
+		control.InputBegan:Fire(still)
+		h.input.InputEnded:Fire(still)
+		assert(#changes == 2 and #commits == 1, "a drag that changes nothing commits nothing")
+		local lost = pointer("MouseButton1", 100)
+		control.InputBegan:Fire(lost)
+		h.input.WindowFocusReleased:Fire()
+		assert(not binding.dragging() and commits[2] == 0, "window focus loss ends and commits a drag")
 		h.stop()
 	end,
-	["slider commits a changed hold when the pointer leaves or the slider unmounts"] = function()
+	["slider follows only the touch that started the drag"] = function()
 		local h = harness()
-		local value = h.vide.source(0)
 		local commits = {}
-		local plus = h.instance("TextButton", "Base")
-		local _, dispose = h.mount("Base", function()
-			local binding = h.require("use-slider").useSlider({
-				value = value,
-				max = 9,
-				onChange = function(next)
-					value(next)
-				end,
-				onCommit = function(next)
-					table.insert(commits, next)
-				end,
-			})
-			binding.increment.action(plus)
-			return binding
-		end)
-		local pointer = { UserInputType = h.enum.UserInputType.MouseButton1 }
-		plus.InputBegan:Fire(pointer)
-		plus.MouseLeave:Fire()
-		assert(#commits == 1 and commits[1] == 1, "leaving mid-hold commits the change")
-		h.input.InputEnded:Fire(pointer)
-		assert(#commits == 1, "release after leaving does not commit again")
-		plus.InputBegan:Fire(pointer)
+		local _, track, binding, dispose = slider(h, {
+			max = 4,
+			onValueCommit = function(value)
+				table.insert(commits, value)
+			end,
+		})
+		local touch = pointer("Touch", 100)
+		track.InputBegan:Fire(touch)
+		assert(binding.value() == 0 and binding.dragging(), "a touch on the track starts a drag")
+		h.input.InputChanged:Fire(pointer("Touch", 300))
+		assert(binding.value() == 0, "another touch is ignored")
+		touch.Position = roblox.Vector3.new(250, 0, 0)
+		h.input.InputChanged:Fire(touch)
+		assert(binding.value() == 3, "the dragging touch moves the value")
+		h.input.InputEnded:Fire(touch)
+		assert(commits[1] == 3 and #commits == 1, "lifting the touch commits")
+		local again = pointer("Touch", 100)
+		track.InputBegan:Fire(again)
 		dispose()
-		assert(#commits == 2 and commits[2] == 2, "unmounting mid-hold commits the change")
+		assert(commits[2] == 0, "unmounting mid-drag commits")
+		h.input.InputEnded:Fire(again)
+		assert(#commits == 2, "the lifted touch after unmount does not commit again")
 		h.stop()
 	end,
-	["slider pointer hold snaps fractional ranges and commits only changed holds"] = function()
+	["selected slider steps and accelerates on D-pad, arrow keys and thumbstick holds"] = function()
 		local h = harness()
-		local current = h.vide.source(2)
+		local value = h.vide.source(5)
 		local commits = {}
-		local plus = h.instance("TextButton", "Base")
-		local minus = h.instance("TextButton", "Base")
-		local slider = h.mount("Base", function()
-			local binding = h.require("use-slider").useSlider({
-				value = current,
-				min = 2,
-				max = 3,
-				step = 0.25,
-				onChange = current,
-				onCommit = function(value)
-					table.insert(commits, value)
-				end,
+		local control = slider(h, {
+			value = value,
+			max = 10,
+			onValueChange = value,
+			onValueCommit = function(next)
+				table.insert(commits, next)
+			end,
+		})
+		assert(control.NextSelectionLeft == control and control.NextSelectionRight == control, "navigation is pinned")
+		h.finish(h.begin(Enum.KeyCode.DPadRight))
+		assert(value() == 5, "an unselected slider ignores the D-pad")
+		h.select(control)
+		local right = h.begin(Enum.KeyCode.DPadRight)
+		assert(value() == 6, "the D-pad steps at once")
+		h.tick(0.39)
+		assert(value() == 6, "the hold waits before repeating")
+		h.tick(0.01)
+		assert(value() == 7, "the hold repeats after 0.4 s")
+		h.tick(0.149)
+		assert(value() == 7, "the first repeat interval is 0.15 s")
+		h.tick(0.001)
+		assert(value() == 8 and #commits == 0, "the hold keeps repeating without committing")
+		h.finish(right)
+		h.tick(1)
+		assert(value() == 8 and #commits == 1 and commits[1] == 8, "release stops the hold and commits once")
+		local left = { KeyCode = Enum.KeyCode.Left, UserInputType = Enum.UserInputType.Keyboard }
+		h.input.InputBegan:Fire(left)
+		h.input.InputEnded:Fire(left)
+		assert(value() == 7 and commits[2] == 7, "the Left arrow behaves like the D-pad")
+		local function stick(x, y)
+			h.input.InputChanged:Fire({
+				KeyCode = Enum.KeyCode.Thumbstick1,
+				UserInputType = Enum.UserInputType.Gamepad1,
+				Position = roblox.Vector3.new(x, y, 0),
 			})
-			binding.increment.action(plus)
-			binding.decrement.action(minus)
-			return binding
-		end)
-		slider.set(2.36)
-		assert(current() == 2.25 and slider.fraction() == 0.25 and commits[1] == 2.25, "fractional step snaps")
-		local pointer = { UserInputType = h.enum.UserInputType.MouseButton1 }
-		plus.InputBegan:Fire(pointer)
-		assert(current() == 2.5 and #commits == 1, "pointer hold changes before settling")
-		h.input.InputEnded:Fire(pointer)
-		assert(commits[2] == 2.5, "pointer release commits")
-		plus.Activated:Fire()
-		assert(current() == 2.5 and #commits == 2, "activated after timed press cannot step twice")
+		end
+		stick(0.8, 0)
+		stick(0.9, 0.1)
+		assert(value() == 8, "a horizontal push steps once per direction")
+		stick(0.3, 0.2)
+		assert(commits[3] == 8, "centering the stick ends and commits the hold")
+		stick(0.5, 0.9)
+		assert(value() == 8, "a mostly vertical push does nothing")
+		stick(-0.7, 0)
+		stick(0, 0)
+		assert(value() == 7 and commits[4] == 7, "pushing left steps down")
+		value(10)
+		h.finish(h.begin(Enum.KeyCode.DPadRight))
+		assert(value() == 10 and #commits == 4, "a hold that cannot move commits nothing")
+		h.select(nil)
+		h.input.GetGamepadState = function()
+			return { { KeyCode = Enum.KeyCode.Thumbstick1, Position = roblox.Vector3.new(-0.9, 0, 0) } }
+		end
+		h.select(control)
+		stick(-0.9, 0)
+		assert(value() == 10, "a stick already pushed when selection arrives waits for centering")
+		stick(0, 0)
+		stick(-0.9, 0)
+		assert(value() == 9, "the stick re-arms after centering")
+		h.stop()
+	end,
+	["a hold ends and commits once on focus loss, disconnect, blocked states, disabling and unmount"] = function()
+		local h = harness()
+		local disabled = h.vide.source(false)
+		local commits = {}
+		local control, _, binding, dispose = slider(h, {
+			defaultValue = 50,
+			max = 100,
+			disabled = disabled,
+			onValueCommit = function(value)
+				table.insert(commits, value)
+			end,
+		})
+		h.select(control)
+		local function hold(cancel, label)
+			local before = #commits
+			local input = h.begin(Enum.KeyCode.DPadRight)
+			local held = binding.value()
+			cancel()
+			h.tick(1)
+			assert(#commits == before + 1 and commits[before + 1] == held and binding.value() == held, label)
+			h.finish(input)
+			assert(#commits == before + 1, label .. " exactly once")
+		end
+		hold(function()
+			h.input.WindowFocusReleased:Fire()
+		end, "window focus loss ends the hold")
+		hold(function()
+			h.input.GamepadDisconnected:Fire(Enum.UserInputType.Gamepad1)
+		end, "a gamepad disconnect ends the hold")
+		hold(function()
+			h.editing(true)
+			h.editing(false)
+		end, "text editing ends the hold")
+		hold(function()
+			h.gui.MenuIsOpen = true
+			h.gui.MenuIsOpen = false
+		end, "the Roblox menu ends the hold")
+		hold(function()
+			disabled(true)
+			disabled(false)
+		end, "disabling ends the hold")
+		hold(function()
+			h.runtime.closeRoot(h.root(10))
+		end, "a modal over the slider ends the hold")
+		hold(dispose, "unmounting ends the hold")
+		h.stop()
+	end,
+	["slider snaps values, writes attributes and refuses while disabled"] = function()
+		local h = harness()
+		local disabled = h.vide.source(false)
+		local changes = 0
+		local control, _, binding = slider(h, {
+			value = 2.6,
+			max = 4,
+			disabled = disabled,
+			onValueChange = function()
+				changes += 1
+			end,
+		})
+		assert(binding.value() == 3 and binding.fraction() == 0.75, "controlled values snap to the step")
+		for _, name in { "Highlighted", "Dragging", "Disabled" } do
+			assert(control:GetAttribute(name) == false, name .. " starts false")
+		end
+		h.select(control)
+		assert(control:GetAttribute("Highlighted") == true and h.feedback[1] == "Focus", "selection highlights")
+		disabled(true)
+		assert(control:GetAttribute("Disabled") == true, "disabled reaches styling")
+		h.finish(h.begin(Enum.KeyCode.DPadRight))
+		control.InputBegan:Fire(pointer("MouseButton1", 300))
+		assert(changes == 0 and not binding.dragging(), "a disabled slider ignores gamepad and pointer input")
+		assert(h.feedback[2] == "Refused" and h.feedback[3] == "Refused", "each refused gesture gives feedback")
+		local _, _, fixed = slider(h, { value = 20, min = 4, max = 4, silent = true })
+		assert(fixed.value() == 4 and fixed.fraction() == 0, "a fixed range is normalized")
 		h.stop()
 	end,
 }

@@ -110,7 +110,7 @@ export function Shop(props: { onBuy: () => void; onClose: () => void }) {
 
 ## Interaction attributes
 
-Every press action writes boolean `Highlighted`, `Pressed`, and `Disabled` attributes immediately and updates them reactively. Import the frozen `Attribute` names to read them in your styling engine.
+Every press action writes boolean `Highlighted`, `Pressed`, and `Disabled` attributes immediately and updates them reactively. The hooks below add `Checked`, `Selected`, `Dragging`, `Editing`, `Invalid` and `Notice`. Import the frozen `Attribute` names to read them in your styling engine.
 
 ```ts
 import { Attribute } from "@trioforge/anvil";
@@ -171,23 +171,25 @@ export function SettingsTabs() {
 
 ## Slider
 
-`useSlider` clamps values to `min` and `max` and snaps to `step` from `min`. The defaults are `min = 0` and `step = 1`. The maximum remains reachable when the range has a partial final step. The caller owns the value and updates it through `onChange`.
+`useSlider` is a drag slider. Attach `control` to the selectable `GuiButton` and `track` to the `GuiObject` that spans the slider's range.
 
-Decrement and increment repeat while held. A changed hold calls `onCommit` once when it ends, whether the input lifts, the pointer leaves, the step reaches its bound, or the slider unmounts. `set` and segment presses change and commit immediately. Disabled controls and unchanged values produce no change or commit. A segment writes `Selected` when its snapped value is at or below the current value. Create each segment binding in its own Vide scope.
+- A mouse or touch press on the control or the track jumps to the pointer and drags until that input lifts.
+- While the control is selected, D-pad Left and Right, the Left and Right arrow keys, and a horizontal thumbstick push step by `step`. A hold repeats after 0.4 s and speeds up to one step every 0.04 s. The control's `NextSelectionLeft` and `NextSelectionRight` point at itself, so Roblox's navigation never takes that input.
+- Values clamp to `min` and `max` and snap to `step` from `min`. The defaults are `min = 0` and `step = 1`. The maximum remains reachable when the range has a partial final step.
+- The value is controllable through `value`, `defaultValue` and `onValueChange`. `onValueCommit` runs once with the final value when a drag or hold that changed the value ends. It ends when the input lifts, the window loses focus, the gamepad disconnects, the slider is disabled or blocked by a modal, text editing or the Roblox menu, or the slider unmounts.
+- `control` writes `Dragging`, `Highlighted` and `Disabled`. A disabled slider refuses each gesture with `"Refused"` feedback unless it is `silent`.
 
 ```tsx
-import Vide, { source } from "@rbxts/vide";
+import Vide from "@rbxts/vide";
 import { useSlider } from "@trioforge/anvil";
 
-export function Volume() {
-	const value = source(5);
-	const slider = useSlider({ value, max: 10, onChange: value, selectFirst: true });
-	const middle = slider.segment(5);
-	return <frame>
-		<textbutton action={slider.decrement.action} Text="-" />
-		<textbutton action={middle.action} Text={() => tostring(slider.value())} />
-		<textbutton action={slider.increment.action} Text="+" />
-	</frame>;
+export function Volume(props: { onValueCommit: (volume: number) => void }) {
+	const slider = useSlider({ defaultValue: 5, max: 10, selectFirst: true, onValueCommit: props.onValueCommit });
+	return <textbutton action={slider.control} Text="" Size={new UDim2(1, 0, 0, 48)}>
+		<frame action={slider.track} Size={new UDim2(1, -24, 0, 8)} Position={new UDim2(0, 12, 0.5, -4)}>
+			<frame Size={() => UDim2.fromScale(slider.fraction(), 1)} />
+		</frame>
+	</textbutton>;
 }
 ```
 

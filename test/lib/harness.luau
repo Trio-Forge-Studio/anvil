@@ -270,11 +270,16 @@ local function harness(options: { deferredText: boolean }?): Mock
 	input = {
 		InputBegan = signal(),
 		InputEnded = signal(),
+		InputChanged = signal(),
+		WindowFocusReleased = signal(),
 		GamepadDisconnected = signal(),
 		TextBoxFocused = signal(),
 		TextBoxFocusReleased = signal(),
 		GetConnectedGamepads = function()
 			return { gamepad }
+		end,
+		GetGamepadState = function()
+			return {}
 		end,
 		IsGamepadButtonDown = function(_self, _pad, key)
 			return held[key] == true

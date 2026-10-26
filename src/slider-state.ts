@@ -19,6 +19,26 @@ export function snapValue(value: number, range: SliderRange): number {
 	if (clamped === range.max) return range.max;
 	return math.clamp(range.min + math.round((clamped - range.min) / range.step) * range.step, range.min, range.max);
 }
+export function fractionOf(value: number, range: SliderRange): number {
+	return range.max === range.min ? 0 : (value - range.min) / (range.max - range.min);
+}
+export function valueAt(fraction: number, range: SliderRange): number {
+	return snapValue(range.min + math.clamp(fraction, 0, 1) * (range.max - range.min), range);
+}
+
+const repeatDelay = 0.4;
+export interface HoldRepeat {
+	readonly elapsed: number;
+	readonly due: number;
+}
+export const holdStart: HoldRepeat = { elapsed: 0, due: repeatDelay };
+// At most one step per frame, so a long frame never jumps several steps.
+export function tickRepeat(hold: HoldRepeat, delta: number): { state: HoldRepeat; fire: boolean } {
+	const elapsed = hold.elapsed + delta;
+	if (elapsed < hold.due) return { state: { elapsed, due: hold.due }, fire: false };
+	return { state: { elapsed, due: elapsed + math.max(0.04, 0.15 - (elapsed - repeatDelay) * 0.04) }, fire: true };
+}
+
 export class SliderCommit {
 	private changed?: number;
 	begin(): void {

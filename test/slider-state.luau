@@ -36,4 +36,34 @@ return {
 		hold:begin()
 		assert(hold:release() == nil, "new hold starts clean")
 	end,
+	["slider maps pointer fractions onto snapped values and back"] = function()
+		local range = { min = 10, max = 20, step = 5 }
+		assert(M.valueAt(0.3, range) == 15, "a fraction snaps to the nearest step")
+		assert(M.valueAt(-1, range) == 10 and M.valueAt(2, range) == 20, "fractions past the track clamp")
+		assert(M.fractionOf(15, range) == 0.5, "fraction is relative to min")
+		assert(M.fractionOf(4, { min = 4, max = 4, step = 1 }) == 0, "a fixed range has a finite fraction")
+	end,
+	["slider hold repeats after 0.4 s and accelerates to one step every 0.04 s"] = function()
+		local hold = M.holdStart
+		local fired = {}
+		local function tick(delta)
+			local result = M.tickRepeat(hold, delta)
+			hold = result.state
+			table.insert(fired, result.fire)
+		end
+		tick(0.39)
+		assert(not fired[1], "nothing repeats before the delay")
+		tick(0.01)
+		assert(fired[2], "the first repeat fires at 0.4 s")
+		tick(0.149)
+		assert(not fired[3], "the next repeat waits 0.15 s")
+		tick(0.001)
+		assert(fired[4], "it fires at 0.55 s")
+		local due = hold.due - hold.elapsed
+		assert(math.abs(due - (0.15 - 0.15 * 0.04)) < 1e-9, "the interval shrinks with hold time")
+		tick(10)
+		assert(fired[5] and math.abs(hold.due - hold.elapsed - 0.04) < 1e-9, "the interval bottoms out at 0.04 s")
+		tick(0.001)
+		assert(not fired[6], "a long frame leaves no backlog of steps")
+	end,
 }
