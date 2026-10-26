@@ -76,7 +76,7 @@ return {
 		button.Activated:Fire()
 		assert(calls == 1, "the Roblox menu blocks the icon")
 		h.gui.MenuIsOpen = false
-		h.runtime.closeRoot(screen)
+		h.runtime.closeScope(screen)
 		button.Activated:Fire()
 		assert(calls == 2 and button.Selectable, "the icon presses again in play mode")
 		h.stop()
@@ -148,7 +148,7 @@ return {
 		local screen = h.root(10, "Pointer")
 		dpadUp()
 		assert(h.gui.SelectedObject == nil, "an open modal blocks top bar focus")
-		h.runtime.closeRoot(screen)
+		h.runtime.closeScope(screen)
 		h.gui.MenuIsOpen = true
 		dpadUp()
 		assert(h.gui.SelectedObject == nil, "the Roblox menu blocks top bar focus")

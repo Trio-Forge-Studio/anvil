@@ -1,5 +1,12 @@
 export { installAnvil, type AnvilAdapter, type CloseInput, type InputDevice, type PressFeedback } from "./adapter";
-export { Modal, modalOpen, useModalActive, useTextEditing, type ModalProps } from "./modal";
+export {
+	FocusScope,
+	modalOpen,
+	useModalActive,
+	useTextEditing,
+	type FocusScopeOptions,
+	type FocusScopeProps,
+} from "./focus-scope";
 export { closeFallbackContext, startMenuRuntime, useSelection } from "./runtime";
 export { usePress, type PressBinding, type PressOptions, type PressTiming } from "./use-press";
 export { Attribute } from "./attributes";
@@ -19,4 +26,4 @@ export { Topbar, type TopbarIconProps, type TopbarLabelProps, type TopbarRootPro
 export { AlertDialog, type AlertDialogProps } from "./alert-dialog";
 export type { AlertDialogBinding, DialogAction } from "./alert-dialog-state";
 export { heartbeat, preRender, type FrameListener } from "./frame-loop";
-export type { Children, ChildFactory, Getter, Placement, Value } from "./props";
+export type { Children, ChildFactory, Getter, Value } from "./props";

@@ -1,17 +1,17 @@
-import type Vide from "@rbxts/vide";
+import Vide from "@rbxts/vide";
 import { alertDialogPolicy, type AlertDialogBinding, type AlertDialogOptions } from "./alert-dialog-state";
-import { Modal } from "./modal";
-import type { Placement } from "./props";
+import { FocusScope } from "./focus-scope";
 
-export interface AlertDialogProps extends AlertDialogOptions, Pick<Placement, "name" | "zIndex"> {
+export interface AlertDialogProps extends AlertDialogOptions {
+	name?: string;
+	zIndex?: number;
 	children: (dialog: AlertDialogBinding) => Vide.Node;
 }
 export function AlertDialog(props: AlertDialogProps): Vide.Node {
 	const policy = alertDialogPolicy(props);
-	return Modal({
-		name: props.name ?? "AlertDialog",
-		zIndex: props.zIndex,
-		onClose: policy.onClose,
-		children: () => props.children(policy.dialog),
-	});
+	return (
+		<FocusScope trapped Name={props.name ?? "AlertDialog"} ZIndex={props.zIndex} onClose={policy.onClose}>
+			{() => props.children(policy.dialog)}
+		</FocusScope>
+	);
 }

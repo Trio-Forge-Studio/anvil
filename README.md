@@ -37,7 +37,7 @@ Anvil reads input and gives feedback only through an adapter that you install on
 ```ts group=readme
 import { UserInputService } from "@rbxts/services";
 import Vide, { source } from "@rbxts/vide";
-import { installAnvil, Modal, startMenuRuntime, usePress, type AnvilAdapter, type InputDevice } from "@trioforge/anvil";
+import { FocusScope, installAnvil, startMenuRuntime, usePress, type AnvilAdapter, type InputDevice } from "@trioforge/anvil";
 
 const device = source<InputDevice>("Keyboard");
 UserInputService.LastInputTypeChanged.Connect((input) => {
@@ -79,12 +79,12 @@ startMenuRuntime();
 | --- | --- |
 | `device` | Reads the current input device. Selection only moves while it is `"Gamepad"`, and highlights ignore `"Touch"`. It must be reactive in Vide, such as a `source` or `derive`, because Anvil reads it inside Vide effects. |
 | `close.held` | Asks whether the close input is down. A screen closes only on a fresh press, so a press that started before the screen opened does nothing. |
-| `close.onPressed` | Subscribes to close presses. The top native modal's `onClose` runs on each armed press. |
+| `close.onPressed` | Subscribes to close presses. The topmost native trapped scope's `onClose` runs on each armed press. |
 | `close.onReleased` | Subscribes to anything that may have lifted the close input. Anvil reads `close.held` again each time, so extra calls are harmless. |
-| `claimMenuInput` | Runs while a native modal is on top and no text box has focus. Return a function that releases the claim, for example to stop gameplay actions from reading ButtonB. |
+| `claimMenuInput` | Runs while a native trapped scope is on top and no text box has focus. Return a function that releases the claim, for example to stop gameplay actions from reading ButtonB. |
 | `feedback` | Receives `"Focus"`, `"Press"` or `"Refused"` for each press that is not `silent`. Play your sounds here. |
 
-## Build a modal
+## Build a screen
 
 ```tsx group=readme
 function BuyButton(props: { onBuy: () => void }) {
@@ -100,13 +100,19 @@ function BuyButton(props: { onBuy: () => void }) {
 }
 
 export function Shop(props: { onBuy: () => void; onClose: () => void }) {
-	return <Modal name="Shop" onClose={props.onClose}>{() => <BuyButton onBuy={props.onBuy} />}</Modal>;
+	return (
+		<FocusScope trapped Name="Shop" onClose={props.onClose}>
+			{() => <BuyButton onBuy={props.onBuy} />}
+		</FocusScope>
+	);
 }
 ```
 
 - `usePress` returns `highlighted`, `pressed` and `progress` getters, and an `action` that you attach to your own `GuiButton`. Pass `hold` for a hold-to-confirm button, or `repeating` for a button that repeats while held.
-- `Modal` takes its children as a function, so the controls inside know which modal owns them.
-- The topmost modal, ranked by its `ScreenGui`'s `DisplayOrder`, owns gamepad selection and blocks presses underneath. Use `modalOpen()` to pause gameplay while any modal is open.
+- `FocusScope` takes its children as a function, so the controls inside know which scope owns them. It renders a transparent full-size `Frame`, and other `Frame` properties pass through to it.
+- A `trapped` scope is modal. The topmost one, ranked by its `ScreenGui`'s `DisplayOrder` and then by opening order, owns gamepad selection, blocks presses underneath and receives close input through `onClose`. Trapped scopes nest, so a small picker can open inside a screen. Use `modalOpen()` to pause gameplay while any trapped scope is open.
+- When a scope closes while it holds selection, it selects the control that was selected when it opened. If that control is gone, hidden or disabled, the scope underneath picks its own best control instead. Pass `restoreFocus={false}` to skip this.
+- A scope without `trapped` only restores selection when it unmounts while holding it, for example a panel that swaps content.
 
 ## Interaction attributes
 
@@ -214,7 +220,7 @@ export function NameField(props: { onValueCommit: (name: string) => void }) {
 
 ## Alert dialog
 
-`AlertDialog` wraps `Modal` and passes press options to your child function. It selects cancel first for a destructive dialog that has `onCancel`. Otherwise it selects confirm. Close input invokes `onCancel` when supplied, then falls back to `onClose`. Callbacks own dismissal, as with `Modal`.
+`AlertDialog` wraps a trapped `FocusScope` and passes press options to your child function. It selects cancel first for a destructive dialog that has `onCancel`. Otherwise it selects confirm. Close input invokes `onCancel` when supplied, then falls back to `onClose`. Callbacks own dismissal.
 
 ```tsx
 import Vide from "@rbxts/vide";
@@ -266,7 +272,7 @@ mount(
 ```
 
 - `selected` is controllable. Pressing an unselected icon reports `true` to `onSelectedChange`, and pressing a selected one reports `false`. When you pass `selected`, your state decides whether the icon lights up. Without it, the icon flips its own state from `defaultSelected`.
-- An icon stays pressable while a modal is open, so it can close the modal it opened. The Roblox menu still blocks it.
+- An icon stays pressable while a trapped scope is open, so it can close the screen it opened. The Roblox menu still blocks it.
 - On a gamepad in play mode, DPadUp selects the last selected icon, or else the leftmost visible, enabled icon.
 - The caption appears after half a second of mouse hover and never on touch or gamepad.
 - `Topbar.Label` draws plain text in the same pill, such as a frame-rate readout. It takes `name`, `text` and `order`, grows with its text and can't be pressed or selected.

@@ -115,7 +115,7 @@ return {
 			return binding
 		end)
 		h.flush()
-		local globalEditing = h.require("modal").useTextEditing()
+		local globalEditing = h.require("focus-scope").useTextEditing()
 		assert(h.gui.SelectedObject == field and not box.Selectable, "only field receives gamepad selection")
 		assert(not box.ClearTextOnFocus and box.TextEditable and box.Text == "he", "box properties bind")
 		assert(
@@ -193,7 +193,10 @@ return {
 		assert(box:IsFocused(), "live enabled field captures focus")
 		release()
 		h.flush()
-		assert(not box:IsFocused() and not h.require("modal").useTextEditing()(), "disposal releases shared focus")
+		assert(
+			not box:IsFocused() and not h.require("focus-scope").useTextEditing()(),
+			"disposal releases shared focus"
+		)
 		h.stop()
 	end,
 }

@@ -32,9 +32,12 @@ return {
 		)
 		s = M.decide(s, { kind = "Unmarked", object = "claim" }, context()).selection
 		assert(
-			M.decide(s, { kind = "Lost", removed = true }, context(nil, "close")).target == "close",
-			'Expected M.decide(s, { kind = "Lost", removed = true }, context(nil, "close")).target == "close"'
+			M.decide(s, { kind = "Lost", removed = true }, context(nil, "close")).target == "other",
+			"removal returns to a live remembered element"
 		)
+		s = M.decide(s, { kind = "Selected", object = "dead" }, context()).selection
+		local removed = M.decide(s, { kind = "Lost", removed = true }, context(nil, "close"))
+		assert(removed.target == "close" and removed.selection.remembered == nil, "a removed element falls to close")
 	end,
 	["late marks replace only their own selection and preserve explicit deselection"] = function()
 		local s = M.emptySelection()
@@ -70,5 +73,15 @@ return {
 			M.decide(d.selection, { kind = "Shown" }, context()).target == "tab",
 			'Expected M.decide(d.selection, { kind = "Shown" }, context()).target == "tab"'
 		)
+	end,
+	["restore remembers its target and selects it only when nothing holds selection"] = function()
+		local s = M.emptySelection()
+		local d = M.decide(s, { kind = "Restore", object = "trigger" }, context())
+		assert(d.target == "trigger" and d.selection.remembered == "trigger", "restore selects into an empty scope")
+		d = M.decide(s, { kind = "Restore", object = "trigger" }, context("other"))
+		assert(d.target == nil and d.selection.remembered == "trigger", "restore never steals live selection")
+		s = M.decide(s, { kind = "Lost", removed = false }, context()).selection
+		d = M.decide(s, { kind = "Restore", object = "trigger" }, context())
+		assert(d.target == nil and d.selection.paused, "restore keeps an explicit deselection")
 	end,
 }

@@ -27,7 +27,7 @@ local function loadVide(): Mock
 	-- Studio runs unoptimized Luau, where Vide's strict mode reruns every effect; specs match it.
 	load("flags").strict = true
 	local vide: Mock = {}
-	for _, name in { "source", "derive", "effect", "cleanup", "untrack", "read", "context", "root", "batch" } do
+	for _, name in { "source", "derive", "effect", "cleanup", "untrack", "read", "context", "root", "batch", "show" } do
 		vide[name] = load(name)
 	end
 	return vide
@@ -50,10 +50,17 @@ local function signal(): Mock
 		end,
 	}
 end
-local guiObjects = { "Frame", "TextButton", "TextBox", "TextLabel", "ImageLabel" }
+local guiObjects = { "Frame", "TextButton", "TextBox", "TextLabel", "ImageLabel", "ImageButton", "CanvasGroup" }
+local buttons = { "TextButton", "ImageButton" }
 local classes = {
 	frame = "Frame",
+	canvasgroup = "CanvasGroup",
 	textbutton = "TextButton",
+	imagebutton = "ImageButton",
+	textbox = "TextBox",
+	uiscale = "UIScale",
+	uisizeconstraint = "UISizeConstraint",
+	sound = "Sound",
 	textlabel = "TextLabel",
 	imagelabel = "ImageLabel",
 	screengui = "ScreenGui",
@@ -93,6 +100,7 @@ local function harness(options: { deferredText: boolean }?): Mock
 	local function instance(class: string, parent: Mock?): Mock
 		local properties: Mock = {
 			Name = class,
+			ClassName = class,
 			Parent = parent,
 			Visible = true,
 			Enabled = true,
@@ -121,6 +129,8 @@ local function harness(options: { deferredText: boolean }?): Mock
 		function methods.IsA(_self, name)
 			return name == class
 				or (name == "GuiObject" and table.find(guiObjects, class) ~= nil)
+				or (name == "GuiButton" and table.find(buttons, class) ~= nil)
+				or (name == "UIComponent" and string.sub(class, 1, 2) == "UI")
 				or (name == "LayerCollector" and class == "ScreenGui")
 		end
 		function methods.FindFirstAncestorOfClass(self: Mock, name: string): Mock
@@ -134,6 +144,9 @@ local function harness(options: { deferredText: boolean }?): Mock
 			return nil
 		end
 		methods.FindFirstAncestorWhichIsA = methods.FindFirstAncestorOfClass
+		function methods.IsDescendantOf(self: Mock, ancestor: Mock): boolean
+			return descendant(self, ancestor)
+		end
 		function methods.FindFirstChild(self: Mock, name: string): Mock
 			for _, child in objects do
 				if child.Parent == self and child.Name == name then
@@ -222,7 +235,15 @@ local function harness(options: { deferredText: boolean }?): Mock
 	vide.jsx = function(tag, given, ...)
 		local props = given or {}
 		if type(tag) == "function" then
-			return tag(props)
+			local count = select("#", ...)
+			if count > 1 then
+				props.children = { ... }
+			elseif count == 1 then
+				props.children = ...
+			end
+			return vide.untrack(function()
+				return tag(props)
+			end)
 		end
 		local class = classes[tag]
 		assert(class, "harness renders " .. tag)
@@ -246,6 +267,14 @@ local function harness(options: { deferredText: boolean }?): Mock
 				for _, nested in child do
 					attach(nested)
 				end
+			elseif type(child) == "function" then
+				-- Roblox defers AncestryChanged, so reparenting a reactive child never re-enters Vide's graph.
+				vide.effect(function()
+					local current = child()
+					table.insert(deferred, function()
+						attach(current)
+					end)
+				end)
 			end
 		end
 		for _, child in { ... } do
@@ -309,7 +338,13 @@ local function harness(options: { deferredText: boolean }?): Mock
 						return roblox.Vector2.new(text.width(params), params.Size)
 					end,
 				},
-				RunService = { Heartbeat = heartbeat, PreRender = signal() },
+				RunService = {
+					Heartbeat = heartbeat,
+					PreRender = signal(),
+					IsStudio = function()
+						return true
+					end,
+				},
 			},
 		},
 		globals = {
@@ -405,10 +440,10 @@ local function harness(options: { deferredText: boolean }?): Mock
 		end
 	end
 	function h.root(order, mode, onClose, pending)
-		local id = runtime.openRoot(mode or "Native", onClose)
+		local id = runtime.openScope(mode or "Native", onClose)
 		local root = instance("Frame", if pending then nil else screen(order))
 		roots[id] = root
-		local detach: () -> () = runtime.attachRoot(id, root)
+		local detach: () -> () = runtime.attachScope(id, root)
 		table.insert(disposals, detach)
 		return id, root
 	end
@@ -472,7 +507,7 @@ local function harness(options: { deferredText: boolean }?): Mock
 			dispose()
 		end
 		for id in roots do
-			runtime.closeRoot(id)
+			runtime.closeScope(id)
 		end
 		stop()
 	end
