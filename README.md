@@ -4,6 +4,8 @@ Headless UI primitives for Roblox games, built on [Vide](https://centau.github.i
 
 Anvil started as the interface runtime of Fragile Delivery. Version 0.1 covers modals, selection and presses. Components such as sliders, tabs and dialogs come next.
 
+Read the documentation at <https://website.trio-forge.workers.dev/docs/anvil/>.
+
 ## Install
 
 ```sh
