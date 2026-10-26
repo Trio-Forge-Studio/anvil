@@ -190,6 +190,7 @@ return {
 		end, "disabling ends the hold")
 		hold(function()
 			h.runtime.closeScope(h.root(10))
+			h.flush()
 		end, "a modal over the slider ends the hold")
 		hold(dispose, "unmounting ends the hold")
 		h.stop()

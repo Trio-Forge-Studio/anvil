@@ -111,7 +111,8 @@ export function Shop(props: { onBuy: () => void; onClose: () => void }) {
 - `usePress` returns `highlighted`, `pressed` and `progress` getters, and an `action` that you attach to your own `GuiButton`. Pass `hold` for a hold-to-confirm button, or `repeating` for a button that repeats while held.
 - `FocusScope` takes its children as a function, so the controls inside know which scope owns them. It renders a transparent full-size `Frame`, and other `Frame` properties pass through to it.
 - A `trapped` scope is modal. The topmost one, ranked by its `ScreenGui`'s `DisplayOrder` and then by opening order, owns gamepad selection, blocks presses underneath and receives close input through `onClose`. Trapped scopes nest, so a small picker can open inside a screen. Use `modalOpen()` to pause gameplay while any trapped scope is open.
-- When a scope closes while it holds selection, it selects the control that was selected when it opened. If that control is gone, hidden or disabled, the scope underneath picks its own best control instead. Pass `restoreFocus={false}` to skip this.
+- When a scope closes while it holds selection, it selects the control that opened it. That is the control whose press opened the scope, even a mouse click while gamepad selection was elsewhere, or else the control that was selected when it opened. A top bar icon is a target only when its own press opened the scope. If the target is gone, hidden or disabled, the scope underneath picks its own best control instead. Pass `restoreFocus={false}` to skip this. Restoring follows the `device` rule, so outside a gamepad session nothing is selected after a scope closes.
+- Opening a trapped scope clears a selection left on a control outside it, because those controls stop being selectable while the trap is open.
 - A scope without `trapped` only restores selection when it unmounts while holding it, for example a panel that swaps content.
 
 ## Parts

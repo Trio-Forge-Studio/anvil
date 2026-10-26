@@ -44,6 +44,7 @@ const scopes = new Map<number, ScopeRecord>();
 const controls = new Map<GuiObject, Control>();
 const topbarIcons = new Map<GuiObject, () => boolean>();
 let lastTopbarIcon: GuiObject | undefined;
+let opener: GuiObject | undefined;
 let serial = 0;
 let writing = false;
 let generation = 0;
@@ -224,10 +225,23 @@ function followSelection(): void {
 		});
 }
 
+// A pointer press can open a scope while gamepad selection sits elsewhere, so the pressed control is the restore target.
+export function pressing<R>(object: GuiObject | undefined, run: () => R): R {
+	const previous = opener;
+	opener = object;
+	try {
+		return run();
+	} finally {
+		opener = previous;
+	}
+}
 function snapshot(): Snapshot | undefined {
-	const object = GuiService.SelectedObject;
+	const object = opener ?? GuiService.SelectedObject;
 	const control = object && controls.get(object);
-	return object && control ? { object, owner: control.owner } : undefined;
+	if (!object || !control) return undefined;
+	// The top bar sits outside every scope, so an icon is a restore target only when it opened the scope.
+	if (control.owner === "Topbar" && object !== opener) return undefined;
+	return { object, owner: control.owner };
 }
 function restore(target: Snapshot): void {
 	const { object, owner } = target;
@@ -238,6 +252,9 @@ function restore(target: Snapshot): void {
 export function openScope(mode: "Native" | "Pointer", onClose?: () => void, restoreFocus = true): number {
 	const id = ++serial;
 	scopes.set(id, { id, mode, onClose, restore: restoreFocus ? snapshot() : undefined, selection: emptySelection() });
+	// Every control outside a trap stops being selectable, so a selection left on one would outlive the trap unowned.
+	const selected = GuiService.SelectedObject;
+	if (selected && controls.has(selected)) writeSelection();
 	state(enter(state(), { id, serial: id, order: undefined }));
 	return id;
 }
@@ -356,6 +373,7 @@ export function useSelection(
 	});
 	return {
 		allowed,
+		object: () => object(),
 		selected: () => object() !== undefined && selectedObject() === object(),
 		action: (instance: GuiObject) => {
 			const unregister = registerControl(

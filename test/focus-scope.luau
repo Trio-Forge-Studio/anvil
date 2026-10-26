@@ -216,4 +216,57 @@ return {
 		assert(h.gui.SelectedObject == elsewhere, "selection outside the scope stays put")
 		h.stop()
 	end,
+	["closing returns selection to the control that opened the scope, never to a top bar icon it did not open"] = function()
+		for _, case in
+			{
+				{ device = "Gamepad", opener = "Portrait", expected = "Portrait" },
+				{ device = "Gamepad", opener = "Daily", expected = "Daily" },
+				{ device = "Keyboard", opener = "Portrait", expected = nil },
+				{ device = "Gamepad", opener = nil, expected = nil },
+			}
+		do
+			local h = setup()
+			local open = h.vide.source(false)
+			local function opens()
+				open(true)
+			end
+			local controls = {
+				Daily = h.press("Topbar", "Daily", { onPress = opens }),
+				Portrait = h.press("Base", "Portrait", { onPress = opens }),
+			}
+			h.mount("Base", function()
+				return h.vide.show(open, function()
+					return scope(h, {
+						trapped = true,
+						onClose = function()
+							open(false)
+						end,
+						children = function()
+							return button(h, "Invite", { selectFirst = true })
+						end,
+					})
+				end)
+			end)
+			local label = `{case.device} opened by {case.opener or "the game"}`
+			h.select(controls.Daily)
+			h.device(case.device)
+			h.flush()
+			if case.opener then
+				controls[case.opener].Activated:Fire()
+			else
+				opens()
+			end
+			h.flush()
+			assert(h.runtime.modalOpen(), `{label}: the press opens the scope`)
+			h.finish(h.begin(h.enum.KeyCode.ButtonB))
+			h.flush()
+			assert(not h.runtime.modalOpen(), `{label}: close input closes it`)
+			local selected = h.gui.SelectedObject
+			assert(
+				selected == (case.expected and controls[case.expected]),
+				`{label}: expected {case.expected}, got {selected and selected.Name}`
+			)
+			h.stop()
+		end
+	end,
 }
