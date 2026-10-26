@@ -1,5 +1,57 @@
 local harness = require("./lib/harness")
 return {
+	["text field does not echo controlled writes when Text signals are deferred"] = function()
+		local h = harness({ deferredText = true })
+		local text = h.charm.atom("a")
+		local changes = {}
+		local box = h.instance("TextBox", "Base")
+		h.mount("Base", function()
+			local binding = h.require("use-text-field").useTextField({
+				text = text,
+				maxLength = 3,
+				onChange = function(value)
+					table.insert(changes, value)
+				end,
+			})
+			binding.box(box)
+		end)
+		text("longer")
+		h.flush()
+		assert(box.Text == "longer" and #changes == 0, "controlled text stays authoritative without echo")
+		box.Text = "abcd"
+		h.flush()
+		assert(box.Text == "abc" and #changes == 1 and changes[1] == "abc", "deferred clamp reports one change")
+		box.Text = "abcx"
+		h.flush()
+		assert(#changes == 1, "deferred repeated clamp is silent")
+		h.stop()
+	end,
+	["text field does not repeat a clamped change or echo it on blur while controlled updates are pending"] = function()
+		local h = harness()
+		local changes, commits = {}, {}
+		local box = h.instance("TextBox", "Base")
+		h.mount("Base", function()
+			local binding = h.require("use-text-field").useTextField({
+				text = "a",
+				maxLength = 3,
+				onChange = function(text)
+					table.insert(changes, text)
+				end,
+				onCommit = function(text)
+					table.insert(commits, text)
+				end,
+			})
+			binding.box(box)
+		end)
+		box:CaptureFocus()
+		box.Text = "abcd"
+		box.Text = "abcx"
+		box:ReleaseFocus(false)
+		h.flush()
+		assert(#changes == 1 and changes[1] == "abc", "same clamped value and blur do not repeat onChange")
+		assert(#commits == 1 and commits[1] == "abc", "blur still commits current input")
+		h.stop()
+	end,
 	["text field binds controlled text limits changes and commits completion on Enter"] = function()
 		local h = harness()
 		local owner = h.root(10)

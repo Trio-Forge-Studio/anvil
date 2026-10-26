@@ -73,7 +73,8 @@ export function usePress(options: PressOptions): PressBinding {
 		});
 	const selection = useSelection({
 		selectFirst: options.selectFirst,
-		buttonADown: options.hold !== undefined || options.repeating ? begin : undefined,
+		buttonADown:
+			options.hold !== undefined || options.repeating || options.onRelease !== undefined ? begin : undefined,
 		buttonAUp: (input) => update({ kind: "End", source: input }),
 	});
 	const highlighted = derive(() => device() !== "Touch" && (hovered() || selection.selected()));

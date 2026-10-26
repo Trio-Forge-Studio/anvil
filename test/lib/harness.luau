@@ -31,7 +31,7 @@ local function signal(): Mock
 		end,
 	}
 end
-local function harness(): Mock
+local function harness(options: { deferredText: boolean }?): Mock
 	local deferred: { () -> () } = {}
 	local objects: { Mock } = {}
 	local focused: Mock = nil
@@ -189,7 +189,13 @@ local function harness(): Mock
 				end
 				properties[name] = value
 				if signals[name] then
-					signals[name]:Fire()
+					if name == "Text" and options and options.deferredText then
+						table.insert(deferred, function()
+							signals[name]:Fire()
+						end)
+					else
+						signals[name]:Fire()
+					end
 				end
 				if name == "Parent" then
 					for _, child in objects do

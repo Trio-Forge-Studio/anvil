@@ -2,7 +2,7 @@
 
 Headless UI primitives for Roblox games, built on [Vide](https://centau.github.io/vide/). Anvil owns behaviour: who gets gamepad selection, which modal is on top, how a press, a hold or a repeat fires, and when the Close button may close a screen. Your game owns every pixel and every sound.
 
-Anvil started as the interface runtime of Fragile Delivery. Version 0.1 covers modals, selection and presses. Builders let your game supply the instances and artwork.
+Anvil started as the interface runtime of Fragile Delivery. It provides modals, selection, presses, and component builders. Builders let your game supply the instances and artwork.
 
 Read the documentation at <https://website.trio-forge.workers.dev/docs/anvil/>.
 

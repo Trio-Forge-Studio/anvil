@@ -1,5 +1,38 @@
 local harness = require("./lib/harness")
 return {
+	["slider with equal bounds has no steps and a finite fraction"] = function()
+		local h = harness()
+		local calls = 0
+		local minus = h.instance("TextButton", "Base")
+		local plus = h.instance("TextButton", "Base")
+		local slider = h.mount("Base", function()
+			local binding = h.require("use-slider").useSlider({
+				value = 20,
+				min = 4,
+				max = 4,
+				onChange = function()
+					calls += 1
+				end,
+				onCommit = function()
+					calls += 1
+				end,
+			})
+			binding.decrement.action(minus)
+			binding.increment.action(plus)
+			return binding
+		end)
+		assert(
+			slider.value() == 4 and slider.fraction() == 0 and slider.atMin() and slider.atMax(),
+			"fixed range is normalized"
+		)
+		assert(
+			minus:GetAttribute("Disabled") == true and plus:GetAttribute("Disabled") == true,
+			"both endpoints disabled initially"
+		)
+		slider.set(9)
+		assert(calls == 0, "fixed range never changes or commits")
+		h.stop()
+	end,
 	["slider repeats commits on release at a bound and guards disabled controls"] = function()
 		local h = harness()
 		local owner = h.root(10)

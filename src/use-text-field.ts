@@ -52,11 +52,10 @@ export function useTextField(options: TextFieldOptions): TextFieldBinding {
 		box: (instance) => {
 			box = instance;
 			let attached = true;
-			let writing = false;
+			let currentText = read(options.text);
 			const write = (text: string) => {
-				writing = true;
+				currentText = text;
 				instance.Text = text;
-				writing = false;
 			};
 			instance.ClearTextOnFocus = false;
 			instance.Selectable = false;
@@ -66,14 +65,16 @@ export function useTextField(options: TextFieldOptions): TextFieldBinding {
 			effect(() => write(read(options.text)));
 			cleanup(
 				instance.GetPropertyChangedSignal("Text").Connect(() => {
-					if (writing || !attached) return;
+					if (!attached || instance.Text === currentText) return;
 					if (disabled()) {
 						write(read(options.text));
 						return;
 					}
+					const previous = currentText;
 					const text = limitText(instance.Text, options.maxLength);
+					currentText = text;
 					if (text !== instance.Text) write(text);
-					if (text !== read(options.text)) options.onChange(text);
+					if (text !== previous) options.onChange(text);
 				}),
 			);
 			cleanup(instance.Focused.Connect(() => editing(true)));
@@ -82,12 +83,13 @@ export function useTextField(options: TextFieldOptions): TextFieldBinding {
 					if (!attached) return;
 					editing(false);
 					const completion = read(options.completion);
+					const previous = currentText;
 					const text = limitText(
 						enterPressed && completion !== undefined ? completion : instance.Text,
 						options.maxLength,
 					);
 					write(text);
-					if (text !== read(options.text)) options.onChange(text);
+					if (text !== previous) options.onChange(text);
 					if (enterPressed) options.onSubmit?.(text);
 					options.onCommit?.(text);
 				}),
