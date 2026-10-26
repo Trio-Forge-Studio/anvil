@@ -87,22 +87,23 @@ export function slot<T extends GuiObject>(
 
 // Every part renders one host with Roblox's visible defaults neutralised; the game's props win over them.
 export function buttonHost(
-	props: AsChildProps<TextButton>,
+	props: AsChildProps<TextButton, unknown>,
 	part: string,
 	own: readonly string[],
 	apply: (instance: GuiButton) => void,
+	children: Vide.Node = props.children as Vide.Node,
 ): Vide.Node {
-	if (props.asChild) return slot(props.children, part, "GuiButton", apply, true);
+	if (props.asChild) return slot(children, part, "GuiButton", apply, true);
 	return (
 		<textbutton
 			Text=""
 			AutoButtonColor={false}
 			BackgroundTransparency={1}
 			BorderSizePixel={0}
-			{...hostProps(props as AsChildProps<TextButton> & Record<string, unknown>, own)}
+			{...hostProps(props as AsChildProps<TextButton, unknown> & Record<string, unknown>, own)}
 			action={chain(apply, props.action)}
 		>
-			{props.children}
+			{children}
 		</textbutton>
 	);
 }
@@ -112,14 +113,14 @@ export function frameHost(
 	own: readonly string[],
 	children: () => Vide.Node,
 	apply: (instance: GuiObject) => void = () => {},
-	size?: UDim2,
+	defaults: HostProps<Frame> = {},
 ): Vide.Node {
 	if (props.asChild) return slot(children(), part, "GuiObject", apply);
 	return (
 		<frame
-			Size={size}
 			BackgroundTransparency={1}
 			BorderSizePixel={0}
+			{...defaults}
 			{...hostProps(props as AsChildProps<Frame, unknown> & Record<string, unknown>, own)}
 			action={chain(apply, props.action)}
 		>

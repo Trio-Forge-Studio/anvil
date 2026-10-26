@@ -23,6 +23,9 @@ export { useSlider, type SliderBinding, type SliderOptions } from "./use-slider"
 export { useTextField, type TextFieldBinding, type TextFieldOptions } from "./use-text-field";
 export { useTopbarIcon, type TopbarIconBinding, type TopbarIconOptions } from "./use-topbar-icon";
 export { Tabs, type TabsContentProps, type TabsListProps, type TabsRootProps, type TabsTriggerProps } from "./tabs";
+export { Checkbox, Switch, type ToggleIndicatorProps, type ToggleRootProps } from "./toggle";
+export { Slider, type SliderPartProps, type SliderRootProps } from "./slider";
+export { TextField, type TextFieldInputProps, type TextFieldRootProps } from "./text-field";
 export type { Orientation } from "./group";
 export type { AsChildProps, HostProps } from "./part";
 export { Topbar, type TopbarIconProps, type TopbarLabelProps, type TopbarRootProps, type TopbarSide } from "./topbar";

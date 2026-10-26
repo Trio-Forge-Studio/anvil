@@ -45,14 +45,9 @@ function content(dialog: DialogContext, props: DialogContentProps, part: string)
 			onClose: () => dialog.setOpen(false),
 		});
 		return ownerContext(scope.owner, () =>
-			frameHost(
-				props,
-				part,
-				["selection", "restoreFocus"],
-				() => props.children(),
-				scope.root,
-				UDim2.fromScale(1, 1),
-			),
+			frameHost(props, part, ["selection", "restoreFocus"], () => props.children(), scope.root, {
+				Size: UDim2.fromScale(1, 1),
+			}),
 		);
 	});
 }
