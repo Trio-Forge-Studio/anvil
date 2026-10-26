@@ -1,5 +1,11 @@
 # @trioforge/anvil
 
+## 0.1.3
+
+### Patch Changes
+
+- [`6d69587`](https://github.com/Trio-Forge-Studio/anvil/commit/6d6958746d9954cc2afaf0df251b7b0355b5a5a2) Thanks [@Hezaerd](https://github.com/Hezaerd)! - The source moved to its own repository, [Trio-Forge-Studio/anvil](https://github.com/Trio-Forge-Studio/anvil), so the package's repository and issue links point there. Its homepage is now its docs page at <https://website.trio-forge.workers.dev/docs/anvil/>. The code is the same as the previous version.
+
 ## 0.1.2
 
 ### Patch Changes
