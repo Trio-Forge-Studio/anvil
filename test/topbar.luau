@@ -20,7 +20,7 @@ return {
 			selected = selected,
 			disabled = disabled,
 			notice = notice,
-			onPress = function()
+			onSelectedChange = function()
 				calls += 1
 			end,
 		})
@@ -44,7 +44,7 @@ return {
 	["top bar icons play no feedback, like Roblox's own top bar"] = function()
 		local h = harness()
 		h.device("Keyboard")
-		local button = icon(h, { selected = false, onPress = function() end })
+		local button = icon(h, {})
 		button.MouseEnter:Fire()
 		button.Activated:Fire()
 		assert(#h.feedback == 0, "hover and press stay silent")
@@ -55,7 +55,7 @@ return {
 		local calls, hud = 0, 0
 		local button = icon(h, {
 			selected = false,
-			onPress = function()
+			onSelectedChange = function()
 				calls += 1
 			end,
 		})
@@ -81,32 +81,50 @@ return {
 		assert(calls == 2 and button.Selectable, "the icon presses again in play mode")
 		h.stop()
 	end,
-	["top bar icon never changes its own selected state"] = function()
+	["a controlled top bar icon reports the opposite of its selection and leaves it to the game"] = function()
 		local h = harness()
 		local selected = h.vide.source(false)
+		local reported = {}
 		local button, binding = icon(h, {
 			selected = selected,
-			onPress = function() end,
+			onSelectedChange = function(next)
+				table.insert(reported, next)
+			end,
 		})
 		button.Activated:Fire()
-		button.Activated:Fire()
-		assert(not binding.selected() and button:GetAttribute("Selected") == false, "presses leave selection alone")
+		assert(reported[1] == true, "pressing an unselected icon reports true")
+		assert(not binding.selected() and button:GetAttribute("Selected") == false, "the press leaves selection alone")
 		selected(true)
 		button.Activated:Fire()
+		assert(reported[2] == false, "pressing a selected icon reports false")
 		assert(binding.selected() and button:GetAttribute("Selected") == true, "the game decides selection")
+		h.stop()
+	end,
+	["an uncontrolled top bar icon flips its own selection from defaultSelected"] = function()
+		local h = harness()
+		local reported = {}
+		local button, binding = icon(h, {
+			defaultSelected = true,
+			onSelectedChange = function(next)
+				table.insert(reported, next)
+			end,
+		})
+		assert(binding.selected() and button:GetAttribute("Selected") == true, "starts at defaultSelected")
+		button.Activated:Fire()
+		assert(not binding.selected() and reported[1] == false, "a press deselects and reports")
 		h.stop()
 	end,
 	["DPadUp selects the remembered or leftmost available icon only from play mode"] = function()
 		local h = harness()
 		local disabled = h.vide.source(false)
 		local function placed(x, given)
-			local button = icon(h, given or { selected = false, onPress = function() end })
+			local button = icon(h, given or {})
 			button.AbsolutePosition = { X = x, Y = 0 }
 			return button
 		end
 		local daily = placed(100)
-		placed(50, { selected = false, disabled = true, onPress = function() end })
-		local settings = placed(200, { selected = false, disabled = disabled, onPress = function() end })
+		placed(50, { disabled = true })
+		local settings = placed(200, { disabled = disabled })
 		placed(10).Visible = false
 		local function dpadUp()
 			h.finish(h.begin(h.enum.KeyCode.DPadUp))
@@ -147,7 +165,7 @@ return {
 		local h = harness()
 		h.device("Keyboard")
 		local selected = h.vide.source(false)
-		local button, binding = icon(h, { selected = selected, caption = "Settings", onPress = function() end })
+		local button, binding = icon(h, { selected = selected })
 		button.MouseEnter:Fire()
 		h.tick(0.4)
 		assert(not binding.captionShown(), "the caption waits for the hover delay")

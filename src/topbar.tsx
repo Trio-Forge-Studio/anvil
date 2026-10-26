@@ -5,7 +5,7 @@ import { topbarLayout } from "./topbar-policy";
 import { useTopbarIcon, type TopbarIconOptions } from "./use-topbar-icon";
 
 export type TopbarSide = "Left" | "Right";
-export interface TopbarProps {
+export interface TopbarRootProps {
 	side: TopbarSide;
 	displayOrder: number;
 	children?: Children;
@@ -29,7 +29,7 @@ function watch<T>(property: "TopbarInset" | "PreferredTransparency", read: () =>
 function Round() {
 	return <uicorner CornerRadius={new UDim(1, 0)} />;
 }
-export function Topbar(props: TopbarProps): Vide.Node {
+function TopbarRoot(props: TopbarRootProps): Vide.Node {
 	const layout = watch("TopbarInset", measure);
 	const left = props.side === "Left";
 	return (
@@ -62,7 +62,7 @@ export function Topbar(props: TopbarProps): Vide.Node {
 		</screengui>
 	);
 }
-export function TopbarIcon(props: TopbarIconProps): Vide.Node {
+function TopbarIcon(props: TopbarIconProps): Vide.Node {
 	const icon = useTopbarIcon(props);
 	const preferred = watch("PreferredTransparency", () => GuiService.PreferredTransparency);
 	const center = new Vector2(0.5, 0.5);
@@ -165,3 +165,4 @@ export function TopbarIcon(props: TopbarIconProps): Vide.Node {
 		</frame>
 	);
 }
+export const Topbar = { Root: TopbarRoot, Icon: TopbarIcon };

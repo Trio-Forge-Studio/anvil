@@ -15,7 +15,7 @@ export {
 export { useSlider, type SliderBinding, type SliderOptions } from "./use-slider";
 export { useTextField, type TextFieldBinding, type TextFieldOptions } from "./use-text-field";
 export { useTopbarIcon, type TopbarIconBinding, type TopbarIconOptions } from "./use-topbar-icon";
-export { Topbar, TopbarIcon, type TopbarIconProps, type TopbarProps, type TopbarSide } from "./topbar";
+export { Topbar, type TopbarIconProps, type TopbarRootProps, type TopbarSide } from "./topbar";
 export { AlertDialog, type AlertDialogProps } from "./alert-dialog";
 export type { AlertDialogBinding, DialogAction } from "./alert-dialog-state";
 export { heartbeat, preRender, type FrameListener } from "./frame-loop";

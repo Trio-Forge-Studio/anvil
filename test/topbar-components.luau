@@ -12,9 +12,9 @@ local function mount(h, props)
 	return h.mount("Base", function()
 		local icons = {}
 		for index, given in props.icons do
-			icons[index] = Topbar.TopbarIcon(given)
+			icons[index] = Topbar.Topbar.Icon(given)
 		end
-		return Topbar.Topbar({ side = props.side, displayOrder = 12, children = icons })
+		return Topbar.Topbar.Root({ side = props.side, displayOrder = 12, children = icons })
 	end)
 end
 return {
@@ -37,7 +37,7 @@ return {
 		local h = harness()
 		h.device("Keyboard")
 		local selected = h.vide.source(false)
-		local presses = 0
+		local presses = {}
 		local gui = mount(h, {
 			side = "Left",
 			icons = {
@@ -48,8 +48,8 @@ return {
 					order = 2,
 					selected = selected,
 					notice = 120,
-					onPress = function()
-						presses += 1
+					onSelectedChange = function(next)
+						table.insert(presses, next)
 					end,
 				},
 				{
@@ -58,7 +58,6 @@ return {
 					order = 1,
 					selected = false,
 					notice = true,
-					onPress = function() end,
 				},
 			},
 		})
@@ -80,7 +79,7 @@ return {
 		assert(caption.Visible, "the caption shows after the hover delay")
 		button.Activated:Fire()
 		assert(
-			presses == 1 and child(button, "IconSpot").BackgroundTransparency == 1,
+			presses[1] == true and child(button, "IconSpot").BackgroundTransparency == 1,
 			"a press leaves selection to the game"
 		)
 		selected(true)

@@ -4,13 +4,15 @@ import { Attribute } from "./attributes";
 import { heartbeat } from "./frame-loop";
 import type { Value } from "./props";
 import { ownerContext, registerTopbarIcon } from "./runtime";
+import { useControllable } from "./use-controllable";
 import { usePress, type PressBinding } from "./use-press";
 
 const captionDelay = 0.5;
 
 export interface TopbarIconOptions {
-	selected: Value<boolean>;
-	onPress: () => boolean | void;
+	selected?: Value<boolean>;
+	defaultSelected?: boolean;
+	onSelectedChange?: (selected: boolean) => void;
 	disabled?: Value<boolean>;
 	notice?: Value<number | boolean>;
 }
@@ -20,11 +22,15 @@ export interface TopbarIconBinding extends PressBinding {
 	captionShown: () => boolean;
 }
 export function useTopbarIcon(options: TopbarIconOptions): TopbarIconBinding {
+	const [selected, setSelected] = useControllable({
+		value: options.selected,
+		defaultValue: options.defaultSelected ?? false,
+		onChange: options.onSelectedChange,
+	});
 	let press!: PressBinding;
 	ownerContext("Topbar", () => {
-		press = usePress({ onPress: options.onPress, disabled: options.disabled, silent: true });
+		press = usePress({ onPress: () => setSelected(!selected()), disabled: options.disabled, silent: true });
 	});
-	const selected = () => read(options.selected);
 	const notice = () => {
 		const value = read(options.notice ?? 0);
 		return typeIs(value, "boolean") ? (value ? 1 : 0) : value;
