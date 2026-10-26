@@ -137,7 +137,7 @@ Parts are the compound layer over the hooks later in this README. Each primitive
 
 ### Tabs
 
-`Tabs.Root` takes `value`, `defaultValue`, `onValueChange` and `disabled`, like `useTabs`. Triggers register in the order they render. While a trigger is selected, its `NextSelection` links on the root's `orientation` point at the next and previous enabled triggers, so the D-pad, thumbstick and arrow keys move along the list through Roblox's own navigation. Movement wraps unless `loop` is `false`. Selecting a trigger with the gamepad activates it. `Tabs.Content` mounts while its value is active.
+`Tabs.Root` takes `value`, `defaultValue`, `onValueChange`, `disabled` and `activationMode`, like `useTabs`. Triggers register in the order they render. While a trigger is selected, its `NextSelection` links on the root's `orientation` point at the next and previous enabled triggers, so the D-pad, thumbstick and arrow keys move along the list through Roblox's own navigation. Movement wraps unless `loop` is `false`. By default, moving through the triggers only selects them and a press activates one. With `activationMode="Automatic"`, selecting a trigger also activates it. `Tabs.Content` mounts while its value is active.
 
 ```tsx
 import Vide from "@rbxts/vide";
@@ -290,7 +290,7 @@ export function SoundToggle(props: { onCheckedChange: (checked: boolean) => void
 
 ## Tabs
 
-Tabs are keyed by value, not position. Call `trigger(value)` inside each trigger's Vide scope. Each binding exposes `selected` and writes `Selected`. Pressing the selected trigger reports nothing, and selecting a trigger with the gamepad activates it. `disabled` on `useTabs` disables every trigger, and `disabled` on a trigger disables only that one.
+Tabs are keyed by value, not position. Call `trigger(value)` inside each trigger's Vide scope. Each binding exposes `selected` and writes `Selected`. Pressing the selected trigger reports nothing. `activationMode` is `"Manual"` by default, so a trigger activates only when pressed. Roblox's own gamepad navigation passes through tab rows on the way to other controls, and a manual row never switches page on the way. With `"Automatic"`, selecting a trigger also activates it. `disabled` on `useTabs` disables every trigger, and `disabled` on a trigger disables only that one.
 
 ```tsx
 import Vide, { source } from "@rbxts/vide";

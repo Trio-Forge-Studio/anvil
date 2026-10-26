@@ -10,7 +10,10 @@ export interface TabsOptions<T> {
 	defaultValue?: T;
 	onValueChange?: (value: T) => void;
 	disabled?: Value<boolean>;
+	activationMode?: Value<TabsActivationMode>;
 }
+// Manual by default: Roblox's gamepad navigation passes through tab rows on its way to other controls.
+export type TabsActivationMode = "Automatic" | "Manual";
 export interface TabsTriggerOptions {
 	disabled?: Value<boolean>;
 	selectFirst?: Value<boolean>;
@@ -47,6 +50,7 @@ export function useTabs<T>(options: TabsOptions<T> = {}): TabsBinding<T> {
 					press.action(instance);
 					effect(() => instance.SetAttribute(Attribute.Selected, selected()));
 					effect(() => {
+						if (read(options.activationMode ?? "Manual") !== "Automatic") return;
 						if (selectedObject() === instance && !disabled()) untrack(() => setValue(key));
 					});
 				},

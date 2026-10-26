@@ -14,6 +14,7 @@ export { useControllable, type ControllableOptions } from "./use-controllable";
 export { useToggle, type ToggleBinding, type ToggleOptions } from "./use-toggle";
 export {
 	useTabs,
+	type TabsActivationMode,
 	type TabsBinding,
 	type TabsOptions,
 	type TabsTriggerBinding,

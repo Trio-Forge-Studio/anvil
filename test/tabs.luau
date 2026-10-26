@@ -75,7 +75,7 @@ return {
 		assert(rendered.mounted.general == 0 and rendered.mounted.audio == 1, "content follows the value")
 		h.stop()
 	end,
-	["arrow links move along the list and selecting a trigger activates it unless disabled"] = function()
+	["arrow links move along the list and skip disabled triggers"] = function()
 		for _, orientation in { "Horizontal", "Vertical" } do
 			local h = setup()
 			local rendered = render(h, { defaultValue = "a", orientation = orientation }, {
@@ -83,16 +83,38 @@ return {
 				{ value = "b", disabled = true },
 				{ value = "c" },
 			})
-			local a, b, c = rendered.triggers[1], rendered.triggers[2], rendered.triggers[3]
+			local a = rendered.triggers[1]
 			h.select(a)
 			local forward = if orientation == "Horizontal" then "NextSelectionRight" else "NextSelectionDown"
 			local backward = if orientation == "Horizontal" then "NextSelectionLeft" else "NextSelectionUp"
-			assert(a[forward] == c, `{orientation}: movement skips the disabled trigger`)
-			assert(a[backward] == c, `{orientation}: tabs loop by default`)
+			assert(a[forward] == rendered.triggers[3], `{orientation}: movement skips the disabled trigger`)
+			assert(a[backward] == rendered.triggers[3], `{orientation}: tabs loop by default`)
+			h.stop()
+		end
+	end,
+	["manual tabs activate only on press and automatic tabs activate on selection unless disabled"] = function()
+		for _, mode in { "Manual", "Automatic" } do
+			local h = setup()
+			local reported = {}
+			local rendered = render(h, {
+				defaultValue = "a",
+				activationMode = if mode == "Manual" then nil else mode,
+				onValueChange = function(value)
+					table.insert(reported, value)
+				end,
+			}, { { value = "a" }, { value = "b", disabled = true }, { value = "c" } })
+			local b, c = rendered.triggers[2], rendered.triggers[3]
 			h.select(c)
-			assert(rendered.tabs.value() == "c", `{orientation}: selecting a trigger activates it`)
-			h.select(b)
-			assert(rendered.tabs.value() == "c", `{orientation}: a disabled trigger never activates`)
+			if mode == "Manual" then
+				assert(rendered.tabs.value() == "a" and #reported == 0, "selection passing through never activates")
+				assert(rendered.mounted.a == 1 and not rendered.mounted.c, "the page stays put")
+				c.Activated:Fire()
+				assert(rendered.tabs.value() == "c" and reported[1] == "c", "a press activates")
+			else
+				assert(rendered.tabs.value() == "c" and reported[1] == "c", "selecting a trigger activates it")
+				h.select(b)
+				assert(rendered.tabs.value() == "c", "a disabled trigger never activates")
+			end
 			h.stop()
 		end
 	end,
