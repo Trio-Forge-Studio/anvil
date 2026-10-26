@@ -200,6 +200,29 @@ export function NameField() {
 }
 ```
 
+## Alert dialog
+
+`AlertDialog` wraps `Modal` and passes press options to your child function. It selects cancel first for a destructive dialog that has `onCancel`. Otherwise it selects confirm. Close input invokes `onCancel` when supplied, then falls back to `onClose`. Callbacks own dismissal, as with `Modal`.
+
+```tsx
+import Vide from "@rbxts/vide";
+import { AlertDialog, usePress, type DialogAction } from "@trioforge/anvil";
+
+function DialogButton(props: DialogAction & { text: string }) {
+	const press = usePress(props);
+	return <textbutton action={press.action} Text={props.text} />;
+}
+
+export function DeleteDialog(props: { onConfirm: () => void; onCancel: () => void }) {
+	return <AlertDialog {...props} destructive>
+		{(dialog) => <frame>
+			<DialogButton {...dialog.confirm} text="Delete" />
+			{dialog.cancel && <DialogButton {...dialog.cancel} text="Cancel" />}
+		</frame>}
+	</AlertDialog>;
+}
+```
+
 ## License
 
 MIT

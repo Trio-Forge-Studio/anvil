@@ -65,7 +65,7 @@ local function harness(): Mock
 				end
 			end
 	end
-	local vide = {
+	local vide: Mock = {
 		source = Charm.atom,
 		derive = Charm.computed,
 		untrack = Charm.untracked,
@@ -214,6 +214,34 @@ local function harness(): Mock
 		end
 		return screens[order]
 	end
+	vide.jsx = function(class, props, ...)
+		assert(class == "frame", "harness renders the modal frame")
+		local object = instance("Frame", screen(0))
+		for name, value in props do
+			if name ~= "action" then
+				object[name] = value
+			end
+		end
+		local function attach(child)
+			if type(child) ~= "table" then
+				return
+			end
+			if child.IsA then
+				child.Parent = object
+			else
+				for _, nested in child do
+					attach(nested)
+				end
+			end
+		end
+		for _, child in { ... } do
+			attach(child)
+		end
+		if props.action then
+			props.action(object)
+		end
+		return object
+	end
 	function gui.Select(_self, root)
 		for _, object in objects do
 			if object.Selectable and descendant(object, root) then
@@ -263,6 +291,7 @@ local function harness(): Mock
 		},
 		globals = {
 			Enum = roblox.Enum,
+			UDim2 = roblox.UDim2,
 			Instance = { new = instance },
 			task = {
 				defer = function(run)

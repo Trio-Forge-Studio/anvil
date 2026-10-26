@@ -7,5 +7,7 @@ export { useToggle, type ToggleBinding, type ToggleOptions } from "./use-toggle"
 export { useTabs, type TabBinding, type TabOptions, type TabsBinding, type TabsOptions } from "./use-tabs";
 export { useSlider, type SliderBinding, type SliderOptions } from "./use-slider";
 export { useTextField, type TextFieldBinding, type TextFieldOptions } from "./use-text-field";
+export { AlertDialog, type AlertDialogProps } from "./alert-dialog";
+export type { AlertDialogBinding, DialogAction } from "./alert-dialog-state";
 export { heartbeat, preRender, type FrameListener } from "./frame-loop";
 export type { Children, ChildFactory, Getter, Placement, Value } from "./props";
