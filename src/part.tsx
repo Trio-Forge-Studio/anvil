@@ -1,8 +1,8 @@
 import { RunService } from "@rbxts/services";
-import type Vide from "@rbxts/vide";
-import { context } from "@rbxts/vide";
+import Vide, { context } from "@rbxts/vide";
 
 export type HostProps<T extends Instance> = Vide.InstanceAttributes<T>;
+// With asChild the part renders nothing of its own, so host properties are a type error rather than silently dropped.
 export type AsChildProps<T extends Instance, Children = Vide.Node> =
 	| { asChild: true; children: Children }
 	| ({ asChild?: false } & Omit<HostProps<T>, "children"> & { children?: Children });
@@ -83,4 +83,47 @@ export function slot<T extends GuiObject>(
 				warn(`${part} owns ${property}; the value on its asChild child is replaced`);
 	apply(host as T);
 	return host as T;
+}
+
+// Every part renders one host with Roblox's visible defaults neutralised; the game's props win over them.
+export function buttonHost(
+	props: AsChildProps<TextButton>,
+	part: string,
+	own: readonly string[],
+	apply: (instance: GuiButton) => void,
+): Vide.Node {
+	if (props.asChild) return slot(props.children, part, "GuiButton", apply, true);
+	return (
+		<textbutton
+			Text=""
+			AutoButtonColor={false}
+			BackgroundTransparency={1}
+			BorderSizePixel={0}
+			{...hostProps(props as AsChildProps<TextButton> & Record<string, unknown>, own)}
+			action={chain(apply, props.action)}
+		>
+			{props.children}
+		</textbutton>
+	);
+}
+export function frameHost(
+	props: AsChildProps<Frame, unknown>,
+	part: string,
+	own: readonly string[],
+	children: () => Vide.Node,
+	apply: (instance: GuiObject) => void = () => {},
+	size?: UDim2,
+): Vide.Node {
+	if (props.asChild) return slot(children(), part, "GuiObject", apply);
+	return (
+		<frame
+			Size={size}
+			BackgroundTransparency={1}
+			BorderSizePixel={0}
+			{...hostProps(props as AsChildProps<Frame, unknown> & Record<string, unknown>, own)}
+			action={chain(apply, props.action)}
+		>
+			{children()}
+		</frame>
+	);
 }

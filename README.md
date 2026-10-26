@@ -220,24 +220,21 @@ export function NameField(props: { onValueCommit: (name: string) => void }) {
 
 ## Alert dialog
 
-`AlertDialog` wraps a trapped `FocusScope` and passes press options to your child function. It selects cancel first for a destructive dialog that has `onCancel`. Otherwise it selects confirm. Close input invokes `onCancel` when supplied, then falls back to `onClose`. Callbacks own dismissal.
+`AlertDialog.Root` takes `open`, `defaultOpen` and `onOpenChange`, like `Dialog.Root`. `AlertDialog.Content` is a trapped scope that mounts while open. `AlertDialog.Action` runs its `onPress` and closes, unless `onPress` returns `false`. `AlertDialog.Cancel` closes and is the scope's fallback selection. Close input closes the dialog through `onOpenChange(false)` without running either `onPress`. Action is selected first, or Cancel when the root is `destructive`.
 
 ```tsx
 import Vide from "@rbxts/vide";
-import { AlertDialog, usePress, type DialogAction } from "@trioforge/anvil";
+import { AlertDialog } from "@trioforge/anvil";
 
-function DialogButton(props: DialogAction & { text: string }) {
-	const press = usePress(props);
-	return <textbutton action={press.action} Text={props.text} />;
-}
-
-export function DeleteDialog(props: { onConfirm: () => void; onCancel: () => void }) {
-	return <AlertDialog {...props} destructive>
-		{(dialog) => <frame>
-			<DialogButton {...dialog.confirm} text="Delete" />
-			{dialog.cancel && <DialogButton {...dialog.cancel} text="Cancel" />}
-		</frame>}
-	</AlertDialog>;
+export function DeleteDialog(props: { open: () => boolean; onOpenChange: (open: boolean) => void; onDelete: () => void }) {
+	return <AlertDialog.Root open={props.open} onOpenChange={props.onOpenChange} destructive>
+		{() => <AlertDialog.Content>
+			{() => <frame Size={UDim2.fromOffset(320, 160)}>
+				<AlertDialog.Action onPress={props.onDelete} Text="Delete" Size={UDim2.fromOffset(120, 40)} />
+				<AlertDialog.Cancel Text="Cancel" Size={UDim2.fromOffset(120, 40)} />
+			</frame>}
+		</AlertDialog.Content>}
+	</AlertDialog.Root>;
 }
 ```
 

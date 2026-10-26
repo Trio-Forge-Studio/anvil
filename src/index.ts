@@ -26,7 +26,16 @@ export { Tabs, type TabsContentProps, type TabsListProps, type TabsRootProps, ty
 export type { Orientation } from "./group";
 export type { AsChildProps, HostProps } from "./part";
 export { Topbar, type TopbarIconProps, type TopbarLabelProps, type TopbarRootProps, type TopbarSide } from "./topbar";
-export { AlertDialog, type AlertDialogProps } from "./alert-dialog";
-export type { AlertDialogBinding, DialogAction } from "./alert-dialog-state";
+export {
+	AlertDialog,
+	Dialog,
+	type AlertDialogButtonProps,
+	type AlertDialogRootProps,
+	type DialogBinding,
+	type DialogButtonProps,
+	type DialogContentProps,
+	type DialogRootProps,
+	type DialogTriggerProps,
+} from "./dialog";
 export { heartbeat, preRender, type FrameListener } from "./frame-loop";
 export type { Children, ChildFactory, Getter, Value } from "./props";

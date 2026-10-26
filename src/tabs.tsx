@@ -1,6 +1,6 @@
 import Vide, { read, show } from "@rbxts/vide";
 import { createGroup, type Group, type Orientation } from "./group";
-import { chain, hostProps, partContext, slot, type AsChildProps } from "./part";
+import { buttonHost, frameHost, partContext, type AsChildProps } from "./part";
 import type { ChildFactory, Value } from "./props";
 import { useTabs, type TabsBinding, type TabsOptions } from "./use-tabs";
 
@@ -27,12 +27,7 @@ function TabsRoot<T>(props: TabsRootProps<T>): Vide.Node {
 export type TabsListProps = AsChildProps<Frame>;
 function TabsList(props: TabsListProps): Vide.Node {
 	context.use("Tabs.List");
-	if (props.asChild) return slot(props.children, "Tabs.List", "GuiObject", () => {});
-	return (
-		<frame BackgroundTransparency={1} BorderSizePixel={0} {...hostProps(props, [])} action={props.action}>
-			{props.children}
-		</frame>
-	);
+	return frameHost(props, "Tabs.List", [], () => props.children);
 }
 
 export type TabsTriggerProps = {
@@ -47,19 +42,7 @@ function TabsTrigger(props: TabsTriggerProps): Vide.Node {
 		trigger.action(instance);
 		group.item(instance, () => read(disabled ?? false) || read(props.disabled ?? false));
 	};
-	if (props.asChild) return slot(props.children, "Tabs.Trigger", "GuiButton", apply, true);
-	return (
-		<textbutton
-			Text=""
-			AutoButtonColor={false}
-			BackgroundTransparency={1}
-			BorderSizePixel={0}
-			{...hostProps(props, ["value", "disabled", "selectFirst"])}
-			action={chain(apply, props.action)}
-		>
-			{props.children}
-		</textbutton>
-	);
+	return buttonHost(props, "Tabs.Trigger", ["value", "disabled", "selectFirst"], apply);
 }
 
 export type TabsContentProps = { value: unknown } & AsChildProps<Frame, ChildFactory> & { children: ChildFactory };
@@ -67,19 +50,7 @@ function TabsContent(props: TabsContentProps): Vide.Node {
 	const { tabs } = context.use("Tabs.Content");
 	return show(
 		() => tabs.value() === props.value,
-		() => {
-			if (props.asChild) return slot(props.children(), "Tabs.Content", "GuiObject", () => {});
-			return (
-				<frame
-					BackgroundTransparency={1}
-					BorderSizePixel={0}
-					{...hostProps(props, ["value"])}
-					action={props.action}
-				>
-					{props.children()}
-				</frame>
-			);
-		},
+		() => frameHost(props, "Tabs.Content", ["value"], () => props.children()),
 	);
 }
 
