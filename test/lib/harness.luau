@@ -34,6 +34,8 @@ end
 local function harness(): Mock
 	local deferred: { () -> () } = {}
 	local objects: { Mock } = {}
+	local focused: Mock = nil
+	local input: Mock
 	local scope: { () -> () } = {}
 	local function own(resource: Mock)
 		table.insert(
@@ -51,11 +53,17 @@ local function harness(): Mock
 		scope = callbacks
 		local result = run()
 		scope = previous
-		return result, function()
-			for index = #callbacks, 1, -1 do
-				callbacks[index]()
+		local disposed = false
+		return result,
+			function()
+				if disposed then
+					return
+				end
+				disposed = true
+				for index = #callbacks, 1, -1 do
+					callbacks[index]()
+				end
 			end
-		end
 	end
 	local vide = {
 		source = Charm.atom,
@@ -107,6 +115,8 @@ local function harness(): Mock
 			Visible = true,
 			Enabled = true,
 			Selectable = false,
+			Text = "",
+			TextEditable = true,
 			ClipsDescendants = false,
 			AbsoluteSize = roblox.Vector2.new(100, 60),
 			AbsolutePosition = roblox.Vector2.zero,
@@ -128,7 +138,7 @@ local function harness(): Mock
 		end
 		function methods.IsA(_self, name)
 			return name == class
-				or (name == "GuiObject" and (class == "Frame" or class == "TextButton"))
+				or (name == "GuiObject" and (class == "Frame" or class == "TextButton" or class == "TextBox"))
 				or (name == "LayerCollector" and class == "ScreenGui")
 		end
 		function methods.FindFirstAncestorOfClass(self: Mock, name: string): Mock
@@ -142,8 +152,32 @@ local function harness(): Mock
 			return nil
 		end
 		methods.FindFirstAncestorWhichIsA = methods.FindFirstAncestorOfClass
-		for _, name in { "AncestryChanged", "InputBegan", "Activated", "MouseEnter", "MouseLeave" } do
+		for _, name in
+			{ "AncestryChanged", "InputBegan", "Activated", "MouseEnter", "MouseLeave", "Focused", "FocusLost" }
+		do
 			properties[name] = signal()
+		end
+		function methods.IsFocused(self)
+			return focused == self
+		end
+		function methods.ReleaseFocus(self, enterPressed)
+			if focused ~= self then
+				return
+			end
+			focused = nil
+			self.FocusLost:Fire(enterPressed or false)
+			input.TextBoxFocusReleased:Fire(self)
+		end
+		function methods.CaptureFocus(self)
+			if focused == self then
+				return
+			end
+			if focused then
+				focused:ReleaseFocus()
+			end
+			focused = self
+			self.Focused:Fire()
+			input.TextBoxFocused:Fire(self)
 		end
 		local object: Mock = setmetatable({}, {
 			__index = function(_self, name)
@@ -191,8 +225,7 @@ local function harness(): Mock
 	local b = roblox.Enum.KeyCode.ButtonB
 	local gamepad = roblox.Enum.UserInputType.Gamepad1
 	local held: Mock = {}
-	local focused: Mock = nil
-	local input: Mock = {
+	input = {
 		InputBegan = signal(),
 		InputEnded = signal(),
 		GamepadDisconnected = signal(),
