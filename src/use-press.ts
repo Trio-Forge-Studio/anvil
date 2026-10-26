@@ -80,9 +80,11 @@ export function usePress(options: PressOptions): PressBinding {
 			update({ kind: "Cancel" });
 		previouslySelected = selected;
 	});
+	let focusPlayed = false;
 	effect(() => {
 		const on = highlighted();
-		if (on && !options.silent) host.feedback("Focus");
+		if (on && !focusPlayed && !options.silent) host.feedback("Focus");
+		focusPlayed = on;
 		untrack(() => options.onHighlightChange?.(on));
 		cleanup(() => {
 			if (on) untrack(() => options.onHighlightChange?.(false));

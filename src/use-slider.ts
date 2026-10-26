@@ -188,8 +188,11 @@ export function useSlider(options: SliderOptions): SliderBinding {
 
 	const focused = derive(() => host.device() !== "Touch" && (hovered() || selection.selected()));
 	const highlighted = derive(() => dragging() || focused());
+	let focusPlayed = false;
 	effect(() => {
-		if (focused() && !options.silent) host.feedback("Focus");
+		const on = focused();
+		if (on && !focusPlayed && !options.silent) host.feedback("Focus");
+		focusPlayed = on;
 	});
 	return {
 		value,

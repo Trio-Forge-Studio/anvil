@@ -24,8 +24,8 @@ local function loadVide(): Mock
 		end
 		return modules[name]
 	end
-	-- Live Roblox clients run optimized Luau, where Vide's strict double runs are off.
-	load("flags").strict = false
+	-- Studio runs unoptimized Luau, where Vide's strict mode reruns every effect; specs match it.
+	load("flags").strict = true
 	local vide: Mock = {}
 	for _, name in { "source", "derive", "effect", "cleanup", "untrack", "read", "context", "root", "batch" } do
 		vide[name] = load(name)
