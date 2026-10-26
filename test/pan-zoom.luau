@@ -434,4 +434,48 @@ return {
 		assert(not binding.dragging(), "unmounting ends the drag")
 		h.stop()
 	end,
+	["pan zoom parts render a viewport and content inside their root"] = function()
+		local h = harness()
+		local PanZoom = h.require("pan-zoom").PanZoom
+		for _, part in { "Viewport", "Content" } do
+			local ok, message = pcall(function()
+				h.mount("Base", function()
+					return PanZoom[part]({})
+				end)
+			end)
+			assert(not ok and string.find(message, `PanZoom.{part} must be used inside PanZoom.Root`, 1, true), message)
+		end
+		local viewport, content, given
+		h.mount("Base", function()
+			return PanZoom.Root({
+				contentSize = Vector2.new(400, 300),
+				children = function(binding)
+					given = binding
+					content = PanZoom.Content({ Name = "Canvas" })
+					viewport = PanZoom.Viewport({ Name = "Map", children = content })
+					return viewport
+				end,
+			})
+		end)
+		assert(viewport.Name == "Map" and content.Name == "Canvas" and content.Parent == viewport, "parts nest")
+		assert(viewport.Active and viewport.BackgroundTransparency == 1, "the viewport sinks input and stays clear")
+		assert(viewport.Size == roblox.UDim2.fromScale(1, 1), "the viewport fills its parent")
+		assert(content.Size == roblox.UDim2.fromOffset(400, 300), "the content takes contentSize")
+		assert(content:FindFirstChild("UIScale").Scale == given.scale(), "the content scales by fit times zoom")
+		local image = h.instance("ImageLabel", "Base")
+		local slot
+		h.mount("Base", function()
+			return PanZoom.Root({
+				contentSize = Vector2.new(400, 300),
+				children = function(binding)
+					slot = binding
+					return PanZoom.Viewport({ asChild = true, children = image })
+				end,
+			})
+		end)
+		image.InputBegan:Fire(pointer("MouseButton1", 10, 10))
+		assert(slot.dragging() and image:GetAttribute("Dragging") == true, "an asChild viewport drags")
+		assert(image.Active and image:FindFirstChild("ScaleProbe"), "an asChild viewport measures its scale")
+		h.stop()
+	end,
 }
