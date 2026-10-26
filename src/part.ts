@@ -1,6 +1,28 @@
+import { RunService } from "@rbxts/services";
 import type Vide from "@rbxts/vide";
+import { context } from "@rbxts/vide";
 
 export type HostProps<T extends Instance> = Vide.InstanceAttributes<T>;
+export type AsChildProps<T extends Instance, Children = Vide.Node> =
+	| { asChild: true; children: Children }
+	| ({ asChild?: false } & Omit<HostProps<T>, "children"> & { children?: Children });
+
+export interface PartContext<T> {
+	provide: <R extends Vide.Node | void>(value: T, run: () => R) => R;
+	use: (part: string) => T;
+}
+export function partContext<T extends defined>(root: string): PartContext<T> {
+	const value = context<T | undefined>(undefined);
+	return {
+		provide: (given, run) => value(given, run),
+		use: (part) => {
+			const found = value();
+			if (found === undefined) error(`${part} must be used inside ${root}`, 3);
+			return found;
+		},
+	};
+}
+
 export function chain<T>(first: (instance: T) => void, second?: (instance: T) => void): (instance: T) => void {
 	if (!second) return first;
 	return (instance) => {
@@ -18,4 +40,47 @@ export function hostProps<P extends object, K extends keyof P>(
 	const result: Record<string, unknown> = {};
 	for (const [key, value] of pairs(props as Record<string, unknown>)) if (!skip.has(key)) result[key] = value;
 	return result as never;
+}
+
+const reserved = [
+	"NextSelectionLeft",
+	"NextSelectionRight",
+	"NextSelectionUp",
+	"NextSelectionDown",
+	"SelectionImageObject",
+] as const;
+
+function collect(node: unknown, into: Instance[], part: string): void {
+	if (node === undefined) return;
+	if (typeIs(node, "userdata")) into.push(node as Instance);
+	else if (typeIs(node, "table")) for (const [, child] of pairs(node)) collect(child, into, part);
+	else error(`${part} asChild needs instances, not a ${typeOf(node)}`, 4);
+}
+
+// Resolves asChild children to the single GuiObject that takes the part's behaviour. UI modifiers beside it move under it.
+export function slot<T extends GuiObject>(
+	children: Vide.Node,
+	part: string,
+	className: "GuiObject" | "GuiButton" | "TextBox",
+	apply: (instance: T) => void,
+	control = false,
+): T {
+	const nodes: Instance[] = [];
+	collect(children, nodes, part);
+	const hosts = nodes.filter((node) => node.IsA("GuiObject"));
+	if (hosts.size() !== 1) error(`${part} asChild needs exactly one GuiObject child, got ${hosts.size()}`, 3);
+	const host = hosts[0] as GuiObject;
+	if (!host.IsA(className)) error(`${part} asChild needs a ${className}, got a ${(host as Instance).ClassName}`, 3);
+	for (const node of nodes) {
+		if (node === host) continue;
+		if (!node.IsA("UIComponent"))
+			error(`${part} asChild only moves UI modifiers beside its child, got a ${node.ClassName}`, 3);
+		node.Parent = host;
+	}
+	if (control && RunService.IsStudio())
+		for (const property of reserved)
+			if (host[property] !== undefined)
+				warn(`${part} owns ${property}; the value on its asChild child is replaced`);
+	apply(host as T);
+	return host as T;
 }

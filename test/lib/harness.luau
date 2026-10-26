@@ -322,6 +322,7 @@ local function harness(options: { deferredText: boolean }?): Mock
 	local device = vide.source("Gamepad")
 	local contexts = {}
 	local feedback: { string } = {}
+	local warnings: { string } = {}
 	local text = {
 		width = function(params): number
 			return #params.Text * 8
@@ -361,6 +362,9 @@ local function harness(options: { deferredText: boolean }?): Mock
 					table.insert(deferred, run)
 				end,
 			},
+			warn = function(message)
+				table.insert(warnings, message)
+			end,
 		},
 	})
 	require("adapter").installAnvil({
@@ -412,6 +416,7 @@ local function harness(options: { deferredText: boolean }?): Mock
 		device = device,
 		contexts = contexts,
 		feedback = feedback,
+		warnings = warnings,
 		text = text,
 		enum = roblox.Enum,
 		vide = vide,
