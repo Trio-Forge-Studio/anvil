@@ -84,6 +84,19 @@ startMenuRuntime();
 | `claimMenuInput` | Runs while a native trapped scope is on top and no text box has focus. Return a function that releases the claim, for example to stop gameplay actions from reading ButtonB. |
 | `feedback` | Receives `"Focus"`, `"Press"` or `"Refused"` for each press that is not `silent`. Play your sounds here. |
 
+Anvil's state, such as `modalOpen()` and the getter `useModalActive()` returns, is Vide state. Another reactive library cannot track it, so a Charm `computed` that reads `modalOpen()` computes once and never updates. Mirror it into an atom from a Vide effect in a root that lives as long as the game:
+
+```ts nocheck
+import { atom } from "@rbxts/charm";
+import { effect, root } from "@rbxts/vide";
+import { modalOpen as anvilModalOpen } from "@trioforge/anvil";
+
+export const modalOpen = atom(false);
+root(() => effect(() => modalOpen(anvilModalOpen())));
+```
+
+Mirror a `useModalActive()` getter the same way, with an `effect` in the component that called it, so the effect ends when the component unmounts.
+
 ## Build a screen
 
 ```tsx group=readme
