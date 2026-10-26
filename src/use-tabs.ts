@@ -1,31 +1,42 @@
 import { effect, read } from "@rbxts/vide";
 import { Attribute } from "./attributes";
 import type { Value } from "./props";
+import { useControllable } from "./use-controllable";
 import { usePress, type PressBinding } from "./use-press";
 
-export interface TabsOptions {
-	selected: Value<number>;
-	onSelect: (index: number) => void;
-}
-export interface TabOptions {
-	selectFirst?: Value<boolean>;
+export interface TabsOptions<T> {
+	value?: Value<T>;
+	defaultValue?: T;
+	onValueChange?: (value: T) => void;
 	disabled?: Value<boolean>;
 }
-export interface TabBinding extends PressBinding {
+export interface TabsTriggerOptions {
+	disabled?: Value<boolean>;
+	selectFirst?: Value<boolean>;
+}
+export interface TabsTriggerBinding extends PressBinding {
 	selected: () => boolean;
 }
-export interface TabsBinding {
-	tab: (index: number, options?: TabOptions) => TabBinding;
+export interface TabsBinding<T> {
+	value: () => T | undefined;
+	trigger: (value: T, options?: TabsTriggerOptions) => TabsTriggerBinding;
 }
-export function useTabs(options: TabsOptions): TabsBinding {
+export function useTabs<T>(options: TabsOptions<T> = {}): TabsBinding<T> {
+	const [value, setValue] = useControllable<T | undefined>({
+		value: options.value,
+		defaultValue: options.defaultValue,
+		onChange: (selected) => {
+			if (selected !== undefined) options.onValueChange?.(selected);
+		},
+	});
 	return {
-		tab: (index, tabOptions = {}) => {
-			const selected = () => read(options.selected) === index;
+		value,
+		trigger: (key, trigger = {}) => {
+			const selected = () => value() === key;
 			const press = usePress({
-				...tabOptions,
-				onPress: () => {
-					if (!selected()) options.onSelect(index);
-				},
+				disabled: () => read(options.disabled ?? false) || read(trigger.disabled ?? false),
+				selectFirst: trigger.selectFirst,
+				onPress: () => setValue(key),
 			});
 			return {
 				...press,

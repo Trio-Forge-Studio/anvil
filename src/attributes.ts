@@ -3,6 +3,7 @@ export const Attribute = table.freeze({
 	Pressed: "Pressed",
 	Disabled: "Disabled",
 	Selected: "Selected",
+	Checked: "Checked",
 	Editing: "Editing",
 	Invalid: "Invalid",
 	Notice: "Notice",

@@ -120,38 +120,52 @@ export function isHighlighted(button: GuiButton) {
 }
 ```
 
+## Controlled and uncontrolled state
+
+Every stateful hook follows the same rule. Pass the value, such as `checked` or `value`, and the hook is controlled. It reads your value, and a change only calls the matching `on…Change`, so you decide whether to apply it. Leave it out and the hook keeps its own state, starting from the `default…` option and still reporting each change. A change to the current value is skipped. `useControllable` is the same rule as a hook, for your own components.
+
+```ts
+import { useControllable } from "@trioforge/anvil";
+
+export function useOpen(props: { open?: () => boolean; onOpenChange?: (open: boolean) => void }) {
+	const [open, setOpen] = useControllable({ value: props.open, defaultValue: false, onChange: props.onOpenChange });
+	return { open, toggle: () => setOpen(!open()) };
+}
+```
+
 ## Toggle
 
-Call `useToggle` in a Vide scope. It reads your controlled `on` value and sends the next boolean to `onToggle`. Its action adds the reactive `Selected` attribute.
+Call `useToggle` in a Vide scope for a checkbox or a switch. Each press flips `checked` and reports it to `onCheckedChange`. Its action adds the reactive `Checked` attribute.
 
 ```tsx
-import Vide, { source } from "@rbxts/vide";
+import Vide from "@rbxts/vide";
 import { useToggle } from "@trioforge/anvil";
 
-export function SoundToggle() {
-	const on = source(true);
-	const toggle = useToggle({ on, onToggle: on });
-	return <textbutton action={toggle.action} Text={() => toggle.on() ? "Sound on" : "Sound off"} />;
+export function SoundToggle(props: { onCheckedChange: (checked: boolean) => void }) {
+	const toggle = useToggle({ defaultChecked: true, onCheckedChange: props.onCheckedChange });
+	return <textbutton action={toggle.action} Text={() => (toggle.checked() ? "Sound on" : "Sound off")} />;
 }
 ```
 
 ## Tabs
 
-Call `tab(index)` inside each tab's Vide scope. Each binding exposes `selected` and writes `Selected`. Pressing the selected tab leaves `onSelect` untouched.
+Tabs are keyed by value, not position. Call `trigger(value)` inside each trigger's Vide scope. Each binding exposes `selected` and writes `Selected`. Pressing the selected trigger reports nothing. `disabled` on `useTabs` disables every trigger, and `disabled` on a trigger disables only that one.
 
 ```tsx
 import Vide, { source } from "@rbxts/vide";
 import { useTabs, type TabsBinding } from "@trioforge/anvil";
 
-function Tab(props: { tabs: TabsBinding; index: number }) {
-	const tab = props.tabs.tab(props.index, { selectFirst: props.index === 1 });
-	return <textbutton action={tab.action} Text={() => tab.selected() ? "Selected" : "Choose"} />;
+type Page = "General" | "Audio";
+
+function Trigger(props: { tabs: TabsBinding<Page>; value: Page }) {
+	const trigger = props.tabs.trigger(props.value, { selectFirst: () => props.tabs.value() === props.value });
+	return <textbutton action={trigger.action} Text={props.value} />;
 }
 
 export function SettingsTabs() {
-	const selected = source(1);
-	const tabs = useTabs({ selected, onSelect: selected });
-	return <frame><Tab tabs={tabs} index={1} /><Tab tabs={tabs} index={2} /></frame>;
+	const page = source<Page>("General");
+	const tabs = useTabs({ value: page, onValueChange: page });
+	return <frame><Trigger tabs={tabs} value="General" /><Trigger tabs={tabs} value="Audio" /></frame>;
 }
 ```
 

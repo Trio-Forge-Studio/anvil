@@ -3,8 +3,15 @@ export { Modal, modalOpen, useModalActive, useTextEditing, type ModalProps } fro
 export { closeFallbackContext, startMenuRuntime, useSelection } from "./runtime";
 export { usePress, type PressBinding, type PressOptions, type PressTiming } from "./use-press";
 export { Attribute } from "./attributes";
+export { useControllable, type ControllableOptions } from "./use-controllable";
 export { useToggle, type ToggleBinding, type ToggleOptions } from "./use-toggle";
-export { useTabs, type TabBinding, type TabOptions, type TabsBinding, type TabsOptions } from "./use-tabs";
+export {
+	useTabs,
+	type TabsBinding,
+	type TabsOptions,
+	type TabsTriggerBinding,
+	type TabsTriggerOptions,
+} from "./use-tabs";
 export { useSlider, type SliderBinding, type SliderOptions } from "./use-slider";
 export { useTextField, type TextFieldBinding, type TextFieldOptions } from "./use-text-field";
 export { useTopbarIcon, type TopbarIconBinding, type TopbarIconOptions } from "./use-topbar-icon";
