@@ -1,4 +1,4 @@
-import type { Getter } from "@rbxts/charm";
+import type { Getter } from "./props";
 export type InputDevice = "Gamepad" | "Touch" | "Keyboard";
 export type PressFeedback = "Focus" | "Press" | "Refused";
 export interface CloseInput {

@@ -10,7 +10,7 @@ return {
 	["press attributes start false and follow hover press and disabled"] = function()
 		local h = harness()
 		h.device("Keyboard")
-		local disabled = h.charm.atom(false)
+		local disabled = h.vide.source(false)
 		local calls = 0
 		local button = h.press("Base", "Press", {
 			disabled = disabled,

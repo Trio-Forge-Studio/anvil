@@ -1,5 +1,4 @@
 import Vide, { cleanup } from "@rbxts/vide";
-import { useAtom } from "@rbxts/vide-charm";
 import type { ChildFactory, Placement, Value } from "./props";
 import { active, attachRoot, closeRoot, modalOpen, openRoot, ownerContext, textEditing } from "./runtime";
 export { modalOpen };
@@ -34,8 +33,8 @@ export function Modal(props: ModalProps): Vide.Node {
 }
 export function useModalActive(): () => boolean {
 	const owner = ownerContext();
-	return useAtom(() => active(owner));
+	return () => active(owner);
 }
 export function useTextEditing(): () => boolean {
-	return useAtom(textEditing);
+	return () => textEditing();
 }

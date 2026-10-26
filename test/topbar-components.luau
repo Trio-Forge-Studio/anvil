@@ -9,11 +9,11 @@ local function child(object, ...: string)
 end
 local function mount(h, props)
 	local Topbar = h.require("topbar")
-	local icons = {}
-	for index, given in props.icons do
-		icons[index] = Topbar.TopbarIcon(given)
-	end
 	return h.mount("Base", function()
+		local icons = {}
+		for index, given in props.icons do
+			icons[index] = Topbar.TopbarIcon(given)
+		end
 		return Topbar.Topbar({ side = props.side, displayOrder = 12, children = icons })
 	end)
 end
@@ -36,7 +36,7 @@ return {
 	["default top bar icon orders draws state notice and caption"] = function()
 		local h = harness()
 		h.device("Keyboard")
-		local selected = h.charm.atom(false)
+		local selected = h.vide.source(false)
 		local presses = 0
 		local gui = mount(h, {
 			side = "Left",

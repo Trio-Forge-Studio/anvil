@@ -9,7 +9,7 @@ Read the documentation at <https://website.trio-forge.workers.dev/docs/anvil/>.
 ## Install
 
 ```sh
-pnpm add @trioforge/anvil @rbxts/vide @rbxts/charm @rbxts/vide-charm @rbxts/services
+pnpm add @trioforge/anvil @rbxts/vide @rbxts/services
 ```
 
 roblox-ts only looks for packages in the scopes your project lists, so add the `@trioforge` scope in two places.
@@ -35,12 +35,11 @@ roblox-ts only looks for packages in the scopes your project lists, so add the `
 Anvil reads input and gives feedback only through an adapter that you install once, on the client, before any Anvil UI renders. Then start the menu runtime.
 
 ```ts group=readme
-import { atom } from "@rbxts/charm";
 import { UserInputService } from "@rbxts/services";
-import Vide from "@rbxts/vide";
+import Vide, { source } from "@rbxts/vide";
 import { installAnvil, Modal, startMenuRuntime, usePress, type AnvilAdapter, type InputDevice } from "@trioforge/anvil";
 
-const device = atom<InputDevice>("Keyboard");
+const device = source<InputDevice>("Keyboard");
 UserInputService.LastInputTypeChanged.Connect((input) => {
 	if (input === Enum.UserInputType.Touch) device("Touch");
 	else if (input === Enum.UserInputType.Gamepad1) device("Gamepad");
@@ -57,7 +56,7 @@ function onButtonB(signal: RBXScriptSignal<(input: InputObject) => void>, listen
 const sounds = new Map<string, Sound>();
 
 const adapter: AnvilAdapter = {
-	device,
+	device: () => device(),
 	close: {
 		held: () =>
 			UserInputService.GetConnectedGamepads().some((gamepad) =>
@@ -78,7 +77,7 @@ startMenuRuntime();
 
 | Member | What Anvil does with it |
 | --- | --- |
-| `device` | Reads the current input device. Selection only moves while it is `"Gamepad"`, and highlights ignore `"Touch"`. It must be a Charm atom or computed, because Anvil reads it inside Charm effects. |
+| `device` | Reads the current input device. Selection only moves while it is `"Gamepad"`, and highlights ignore `"Touch"`. It must be reactive in Vide, such as a `source` or `derive`, because Anvil reads it inside Vide effects. |
 | `close.held` | Asks whether the close input is down. A screen closes only on a fresh press, so a press that started before the screen opened does nothing. |
 | `close.onPressed` | Subscribes to close presses. The top native modal's `onClose` runs on each armed press. |
 | `close.onReleased` | Subscribes to anything that may have lifted the close input. Anvil reads `close.held` again each time, so extra calls are harmless. |

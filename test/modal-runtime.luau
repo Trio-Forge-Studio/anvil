@@ -257,7 +257,7 @@ return {
 	["modal runtime repeat and hold stop on disable menu editing and controller disconnect"] = function()
 		local h = harness()
 		local id = h.root(10)
-		local disabled = h.charm.atom(false)
+		local disabled = h.vide.source(false)
 		local fired = 0
 		local ends = 0
 		local button = h.press(id, "Increase", {
@@ -335,7 +335,7 @@ return {
 	["modal runtime a timing change cannot turn hold release into ordinary activation"] = function()
 		local h = harness()
 		local id = h.root(10)
-		local hold = h.charm.atom(1)
+		local hold = h.vide.source(1)
 		local fired = 0
 		local button = h.press(id, "Dynamic", {
 			selectFirst = true,
@@ -361,7 +361,7 @@ return {
 		local h = harness()
 		local id = h.root(10)
 		local refuse = false
-		local disabled = h.charm.atom(false)
+		local disabled = h.vide.source(false)
 		local buy = h.press(id, "Buy", {
 			selectFirst = true,
 			disabled = disabled,
@@ -383,7 +383,7 @@ return {
 		)
 		local hold = h.press(id, "Hold", {
 			hold = 1,
-			disabled = h.charm.atom(true),
+			disabled = h.vide.source(true),
 			onPress = function() end,
 		})
 		h.select(hold)

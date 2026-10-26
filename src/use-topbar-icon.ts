@@ -1,5 +1,4 @@
 import { cleanup, derive, effect, read, source } from "@rbxts/vide";
-import { useAtom } from "@rbxts/vide-charm";
 import { adapter } from "./adapter";
 import { Attribute } from "./attributes";
 import { heartbeat } from "./frame-loop";
@@ -21,7 +20,6 @@ export interface TopbarIconBinding extends PressBinding {
 	captionShown: () => boolean;
 }
 export function useTopbarIcon(options: TopbarIconOptions): TopbarIconBinding {
-	const device = useAtom(adapter().device);
 	let press!: PressBinding;
 	ownerContext("Topbar", () => {
 		press = usePress({ onPress: options.onPress, disabled: options.disabled, silent: true });
@@ -34,7 +32,7 @@ export function useTopbarIcon(options: TopbarIconOptions): TopbarIconBinding {
 	const hoverElapsed = source(false);
 	effect(() => {
 		hoverElapsed(false);
-		if (device() !== "Keyboard" || !press.highlighted()) return;
+		if (adapter().device() !== "Keyboard" || !press.highlighted()) return;
 		let waited = 0;
 		const stop = heartbeat((_, delta) => {
 			waited += delta;

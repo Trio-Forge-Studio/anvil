@@ -2,8 +2,8 @@ local harness = require("./lib/harness")
 return {
 	["toggle reads controlled state and changes it only on an enabled press"] = function()
 		local h = harness()
-		local on = h.charm.atom(false)
-		local disabled = h.charm.atom(false)
+		local on = h.vide.source(false)
+		local disabled = h.vide.source(false)
 		local calls = 0
 		local button = h.instance("TextButton", "Base")
 		local binding = h.mount("Base", function()
@@ -33,8 +33,8 @@ return {
 	["tabs bind in child scopes select first and skip reselection"] = function()
 		local h = harness()
 		local owner = h.root(10)
-		local selected = h.charm.atom(1)
-		local disabled = h.charm.atom(false)
+		local selected = h.vide.source(1)
+		local disabled = h.vide.source(false)
 		local calls = 0
 		local tabs = h.require("use-tabs").useTabs({
 			selected = selected,

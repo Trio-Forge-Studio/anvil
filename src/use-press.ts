@@ -1,6 +1,5 @@
 import { UserInputService } from "@rbxts/services";
 import { cleanup, derive, effect, read, source, untrack } from "@rbxts/vide";
-import { useAtom } from "@rbxts/vide-charm";
 import { heartbeat } from "./frame-loop";
 import { adapter } from "./adapter";
 import { Attribute } from "./attributes";
@@ -25,9 +24,6 @@ export interface PressBinding {
 }
 export function usePress(options: PressOptions): PressBinding {
 	const host = adapter();
-	const device = useAtom(host.device);
-	const menu = useAtom(menuOpen);
-	const editing = useAtom(textEditing);
 	const hovered = source(false);
 	const state = source<PressState<InputObject>>(idlePress());
 	let timedPress = false;
@@ -41,7 +37,7 @@ export function usePress(options: PressOptions): PressBinding {
 	};
 	const fire = () =>
 		untrack(() => {
-			if (!selection.allowed() || menu()) return;
+			if (!selection.allowed() || menuOpen()) return;
 			const refused = read(options.disabled ?? false) || options.onPress() === false;
 			if (!options.silent) host.feedback(refused ? "Refused" : "Press");
 		});
@@ -56,7 +52,7 @@ export function usePress(options: PressOptions): PressBinding {
 		});
 	const begin = (input: InputObject) =>
 		untrack(() => {
-			if (!selection.allowed() || menu() || editing()) return;
+			if (!selection.allowed() || menuOpen() || textEditing()) return;
 			if (state().source === undefined) timedPress = mode().kind !== "Activate";
 			if (read(options.disabled ?? false)) {
 				if (!options.silent && mode().kind !== "Activate") host.feedback("Refused");
@@ -69,7 +65,7 @@ export function usePress(options: PressOptions): PressBinding {
 		buttonADown: options.hold !== undefined || options.repeating ? begin : undefined,
 		buttonAUp: (input) => update({ kind: "End", source: input }),
 	});
-	const highlighted = derive(() => device() !== "Touch" && (hovered() || selection.selected()));
+	const highlighted = derive(() => host.device() !== "Touch" && (hovered() || selection.selected()));
 	const pressed = derive(() => state().source !== undefined);
 	let previouslySelected = false;
 	effect(() => {
@@ -77,8 +73,8 @@ export function usePress(options: PressOptions): PressBinding {
 		if (
 			!selection.allowed() ||
 			read(options.disabled ?? false) ||
-			menu() ||
-			editing() ||
+			menuOpen() ||
+			textEditing() ||
 			(previouslySelected && !selected)
 		)
 			update({ kind: "Cancel" });

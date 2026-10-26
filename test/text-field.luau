@@ -2,7 +2,7 @@ local harness = require("./lib/harness")
 return {
 	["text field does not echo controlled writes when Text signals are deferred"] = function()
 		local h = harness({ deferredText = true })
-		local text = h.charm.atom("a")
+		local text = h.vide.source("a")
 		local changes = {}
 		local box = h.instance("TextBox", "Base")
 		h.mount("Base", function()
@@ -55,10 +55,10 @@ return {
 	["text field binds controlled text limits changes and commits completion on Enter"] = function()
 		local h = harness()
 		local owner = h.root(10)
-		local text = h.charm.atom("he")
-		local completion = h.charm.atom("hello")
-		local disabled = h.charm.atom(false)
-		local invalid = h.charm.atom(false)
+		local text = h.vide.source("he")
+		local completion = h.vide.source("hello")
+		local disabled = h.vide.source(false)
+		local invalid = h.vide.source(false)
 		local changes, submissions, commits, events = {}, {}, {}, {}
 		local field = h.instance("TextButton", owner)
 		local box = h.instance("TextBox", owner)
@@ -137,7 +137,7 @@ return {
 	end,
 	["text field defers autofocus and cancels it after disposal or disabling"] = function()
 		local h = harness()
-		local disabled = h.charm.atom(false)
+		local disabled = h.vide.source(false)
 		local box = h.instance("TextBox", "Base")
 		local _, dispose = h.mount("Base", function()
 			local binding = h.require("use-text-field")

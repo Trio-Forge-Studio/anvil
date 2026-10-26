@@ -36,8 +36,8 @@ return {
 	["slider commits a hold once when it ends at a bound and guards disabled controls"] = function()
 		local h = harness()
 		local owner = h.root(10)
-		local value = h.charm.atom(1)
-		local disabled = h.charm.atom(false)
+		local value = h.vide.source(1)
+		local disabled = h.vide.source(false)
 		local changes, commits = {}, {}
 		local minus = h.instance("TextButton", owner)
 		local plus = h.instance("TextButton", owner)
@@ -93,7 +93,7 @@ return {
 	end,
 	["slider commits a changed hold when the pointer leaves or the slider unmounts"] = function()
 		local h = harness()
-		local value = h.charm.atom(0)
+		local value = h.vide.source(0)
 		local commits = {}
 		local plus = h.instance("TextButton", "Base")
 		local _, dispose = h.mount("Base", function()
@@ -123,7 +123,7 @@ return {
 	end,
 	["slider pointer hold snaps fractional ranges and commits only changed holds"] = function()
 		local h = harness()
-		local current = h.charm.atom(2)
+		local current = h.vide.source(2)
 		local commits = {}
 		local plus = h.instance("TextButton", "Base")
 		local minus = h.instance("TextButton", "Base")

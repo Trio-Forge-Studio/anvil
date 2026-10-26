@@ -4,15 +4,34 @@ local load = require("./load")
 -- The engine adapter accepts Roblox instances and signals; these doubles are dynamic.
 local roblox: any = require("@lune/roblox")
 type Mock = any
-local system = luau.load(fs.readFile("node_modules/@rbxts/charm/src/system.luau"))()
-local Charm = luau.load(
-	fs.readFile("node_modules/@rbxts/charm/src/init.luau"),
-	{ environment = {
-		require = function()
-			return system
-		end,
-	} }
-)()
+-- Vide's reactive core runs as is in Lune. Each harness gets a fresh copy so specs never share a graph.
+local function loadVide(): Mock
+	local modules: { [string]: Mock } = {}
+	local function load(name: string): Mock
+		if modules[name] == nil then
+			local path = `node_modules/@rbxts/vide/src/{name}.luau`
+			modules[name] = luau.load(fs.readFile(path), {
+				debugName = path,
+				environment = {
+					require = function(target: string): Mock
+						if target == "../test/mock" then
+							return { typeof = typeof }
+						end
+						return load((string.match(target, "^%./(.+)$")))
+					end,
+				},
+			})()
+		end
+		return modules[name]
+	end
+	-- Live Roblox clients run optimized Luau, where Vide's strict double runs are off.
+	load("flags").strict = false
+	local vide: Mock = {}
+	for _, name in { "source", "derive", "effect", "cleanup", "untrack", "read", "context", "root", "batch" } do
+		vide[name] = load(name)
+	end
+	return vide
+end
 local function signal(): Mock
 	local listeners: { [(...Mock) -> ()]: boolean } = {}
 	return {
@@ -49,68 +68,18 @@ local function harness(options: { deferredText: boolean }?): Mock
 	local objects: { Mock } = {}
 	local focused: Mock = nil
 	local input: Mock
-	local scope: { () -> () } = {}
-	local function own(resource: Mock)
-		table.insert(
-			scope,
-			if type(resource) == "function"
-				then resource
-				else function()
-					resource:Disconnect()
-				end
-		)
-	end
+	local vide = loadVide()
 	local function scoped(run: () -> Mock): (Mock, () -> ())
-		local previous = scope
-		local callbacks = {}
-		scope = callbacks
-		local result = run()
-		scope = previous
+		local destroy, result = vide.root(run)
 		local disposed = false
-		return result,
-			function()
-				if disposed then
-					return
-				end
-				disposed = true
-				for index = #callbacks, 1, -1 do
-					callbacks[index]()
-				end
+		return result, function()
+			if disposed then
+				return
 			end
+			disposed = true
+			destroy()
+		end
 	end
-	local vide: Mock = {
-		source = Charm.atom,
-		derive = Charm.computed,
-		untrack = Charm.untracked,
-		cleanup = own,
-		context = function(default: Mock)
-			local value = default
-			return function(...: Mock): Mock
-				if select("#", ...) == 0 then
-					return value
-				end
-				local given, run = ...
-				local previous = value
-				value = given
-				local result = run()
-				value = previous
-				return result
-			end
-		end,
-		effect = function(run: () -> ())
-			own(Charm.effect(function()
-				local _, dispose = scoped(run)
-				return dispose
-			end))
-		end,
-		read = function(value: Mock): Mock
-			if type(value) == "function" then
-				local getter: () -> Mock = value
-				return getter()
-			end
-			return value
-		end,
-	}
 	local function descendant(object: Mock, ancestor: Mock): boolean
 		local parent = object.Parent
 		while parent do
@@ -200,33 +169,34 @@ local function harness(options: { deferredText: boolean }?): Mock
 			self.Focused:Fire()
 			input.TextBoxFocused:Fire(self)
 		end
-		local object: Mock = setmetatable({}, {
-			__index = function(_self, name)
-				return methods[name] or properties[name]
-			end,
-			__newindex = function(self, name, value)
-				if properties[name] == value then
-					return
-				end
-				properties[name] = value
-				if signals[name] then
-					if name == "Text" and options and options.deferredText then
-						table.insert(deferred, function()
-							signals[name]:Fire()
-						end)
-					else
+		-- Userdata like a real Instance, so Vide sources skip writes of the same object.
+		local object: Mock = newproxy(true)
+		local meta = getmetatable(object)
+		meta.__index = function(_self, name)
+			return methods[name] or properties[name]
+		end
+		meta.__newindex = function(self, name, value)
+			if properties[name] == value then
+				return
+			end
+			properties[name] = value
+			if signals[name] then
+				if name == "Text" and options and options.deferredText then
+					table.insert(deferred, function()
 						signals[name]:Fire()
+					end)
+				else
+					signals[name]:Fire()
+				end
+			end
+			if name == "Parent" then
+				for _, child in objects do
+					if child == self or descendant(child, self) then
+						child.AncestryChanged:Fire()
 					end
 				end
-				if name == "Parent" then
-					for _, child in objects do
-						if child == self or descendant(child, self) then
-							child.AncestryChanged:Fire()
-						end
-					end
-				end
-			end,
-		})
+			end
+		end
 		table.insert(objects, object)
 		return object
 	end
@@ -270,12 +240,9 @@ local function harness(options: { deferredText: boolean }?): Mock
 			end
 		end
 		local function attach(child)
-			if type(child) ~= "table" then
-				return
-			end
-			if child.IsA then
+			if type(child) == "userdata" then
 				child.Parent = object
-			else
+			elseif type(child) == "table" then
 				for _, nested in child do
 					attach(nested)
 				end
@@ -318,18 +285,12 @@ local function harness(options: { deferredText: boolean }?): Mock
 	}
 	local close = { Pressed = signal(), Released = signal() }
 	local heartbeat = signal()
-	local device = Charm.atom("Gamepad")
+	local device = vide.source("Gamepad")
 	local contexts = {}
 	local feedback: { string } = {}
 	local require = load({
 		packages = {
-			["@rbxts/charm"] = Charm,
 			["@rbxts/vide"] = vide,
-			["@rbxts/vide-charm"] = {
-				useAtom = function(value)
-					return value
-				end,
-			},
 			["@rbxts/services"] = {
 				GuiService = gui,
 				UserInputService = input,
@@ -402,7 +363,7 @@ local function harness(options: { deferredText: boolean }?): Mock
 		contexts = contexts,
 		feedback = feedback,
 		enum = roblox.Enum,
-		charm = Charm,
+		vide = vide,
 	}
 	function h.mount(owner, run)
 		local result, dispose = scoped(function()

@@ -175,9 +175,6 @@ importers:
       '@changesets/cli':
         specifier: 3.0.3
         version: 3.0.3
-      '@rbxts/charm':
-        specifier: 0.11.1
-        version: 0.11.1
       '@rbxts/compiler-types':
         specifier: 3.0.0-types.0
         version: 3.0.0-types.0
@@ -190,9 +187,6 @@ importers:
       '@rbxts/vide':
         specifier: 0.6.1
         version: 0.6.1
-      '@rbxts/vide-charm':
-        specifier: 0.4.1
-        version: 0.4.1(@rbxts/vide@0.6.1)
       roblox-ts:
         specifier: 3.0.0
         version: 3.0.0
@@ -854,9 +848,6 @@ packages:
   '@polka/url@1.0.0-next.29':
     resolution: {integrity: sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==}
 
-  '@rbxts/charm@0.11.1':
-    resolution: {integrity: sha512-+o37xMtGYk3LJ9DYo5Y6kpzGWpZ6R5e1bIWWm/zsu/vY6njJHeMvHZGx/RJa94CrkdHRrhDSkKqlGN+b9KuPuA==}
-
   '@rbxts/compiler-types@3.0.0-types.0':
     resolution: {integrity: sha512-VGOHJPoL7+56NTatMGqQj3K7xWuzEV+aP4QD5vZiHu+bcff3kiTmtoadaF6NkJrmwfFAvbsd4Dg764ZjWNceag==}
 
@@ -865,11 +856,6 @@ packages:
 
   '@rbxts/types@1.0.959':
     resolution: {integrity: sha512-UyqSEnNsAZsL+3z1smoOFBHXmqXRhMb8hy8sL2IST/C78C96uXop4qYSaBifXjKMye/tckB7j8ILZEmdOD88nQ==}
-
-  '@rbxts/vide-charm@0.4.1':
-    resolution: {integrity: sha512-mSqf915Swn1FqIIcNIRKTVdtwnHYRHY1Y3wGFRi0Zp0RnwGIty18KA2xAsGfuCaOuRvE+qyXgpt75WbeAyM8cQ==}
-    peerDependencies:
-      '@rbxts/vide': '*'
 
   '@rbxts/vide@0.6.1':
     resolution: {integrity: sha512-syFqx+HYXy0TauDCGLhc68K2cAlfgYookIJSRtJZ01W7mUI+EKyj80x2L91dQxos3BwAAGJqBD/ovWU4M//+Lg==}
@@ -2221,18 +2207,11 @@ snapshots:
 
   '@polka/url@1.0.0-next.29': {}
 
-  '@rbxts/charm@0.11.1': {}
-
   '@rbxts/compiler-types@3.0.0-types.0': {}
 
   '@rbxts/services@1.6.0': {}
 
   '@rbxts/types@1.0.959': {}
-
-  '@rbxts/vide-charm@0.4.1(@rbxts/vide@0.6.1)':
-    dependencies:
-      '@rbxts/charm': 0.11.1
-      '@rbxts/vide': 0.6.1
 
   '@rbxts/vide@0.6.1': {}
 

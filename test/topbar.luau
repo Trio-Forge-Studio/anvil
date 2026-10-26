@@ -12,9 +12,9 @@ return {
 	["top bar icon attributes follow hover selected disabled and notice"] = function()
 		local h = harness()
 		h.device("Keyboard")
-		local selected = h.charm.atom(false)
-		local disabled = h.charm.atom(false)
-		local notice = h.charm.atom(false :: any)
+		local selected = h.vide.source(false)
+		local disabled = h.vide.source(false)
+		local notice = h.vide.source(false :: any)
 		local calls = 0
 		local button = icon(h, {
 			selected = selected,
@@ -83,7 +83,7 @@ return {
 	end,
 	["top bar icon never changes its own selected state"] = function()
 		local h = harness()
-		local selected = h.charm.atom(false)
+		local selected = h.vide.source(false)
 		local button, binding = icon(h, {
 			selected = selected,
 			onPress = function() end,
@@ -98,7 +98,7 @@ return {
 	end,
 	["DPadUp selects the remembered or leftmost available icon only from play mode"] = function()
 		local h = harness()
-		local disabled = h.charm.atom(false)
+		local disabled = h.vide.source(false)
 		local function placed(x, given)
 			local button = icon(h, given or { selected = false, onPress = function() end })
 			button.AbsolutePosition = { X = x, Y = 0 }
@@ -146,7 +146,7 @@ return {
 	["top bar caption shows after half a second of mouse hover and hides when selected"] = function()
 		local h = harness()
 		h.device("Keyboard")
-		local selected = h.charm.atom(false)
+		local selected = h.vide.source(false)
 		local button, binding = icon(h, { selected = selected, caption = "Settings", onPress = function() end })
 		button.MouseEnter:Fire()
 		h.tick(0.4)
