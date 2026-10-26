@@ -1,8 +1,8 @@
 import Vide from "@rbxts/vide";
-import { buttonHost, chain, hostProps, partContext, slot, type AsChildProps } from "./part";
+import { buttonHost, chain, hostProps, partContext, slot, type AsChildProps, type ButtonPartProps } from "./part";
 import { useTextField, type TextFieldBinding, type TextFieldOptions } from "./use-text-field";
 
-export type TextFieldRootProps = TextFieldOptions & AsChildProps<TextButton, (field: TextFieldBinding) => Vide.Node>;
+export type TextFieldRootProps = TextFieldOptions & ButtonPartProps<TextFieldBinding>;
 export type TextFieldInputProps = AsChildProps<TextBox>;
 const options = [
 	"value",
@@ -21,9 +21,7 @@ const context = partContext<TextFieldBinding>("TextField.Root");
 
 function TextFieldRoot(props: TextFieldRootProps): Vide.Node {
 	const field = useTextField(props);
-	return context.provide(field, () =>
-		buttonHost(props, "TextField.Root", options, field.control, props.children?.(field)),
-	);
+	return context.provide(field, () => buttonHost(props, "TextField.Root", options, field.control, field));
 }
 function TextFieldInput(props: TextFieldInputProps): Vide.Node {
 	const field = context.use("TextField.Input");

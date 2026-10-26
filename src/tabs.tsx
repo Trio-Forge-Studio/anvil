@@ -1,8 +1,8 @@
 import Vide, { read, show } from "@rbxts/vide";
 import { createGroup, type Group, type Orientation } from "./group";
-import { buttonHost, frameHost, partContext, type AsChildProps } from "./part";
+import { buttonHost, frameHost, partContext, type AsChildProps, type ButtonPartProps } from "./part";
 import type { ChildFactory, Value } from "./props";
-import { useTabs, type TabsBinding, type TabsOptions } from "./use-tabs";
+import { useTabs, type TabsBinding, type TabsOptions, type TabsTriggerBinding } from "./use-tabs";
 
 interface TabsContext {
 	tabs: TabsBinding<unknown>;
@@ -34,7 +34,7 @@ export type TabsTriggerProps = {
 	value: unknown;
 	disabled?: Value<boolean>;
 	selectFirst?: Value<boolean>;
-} & AsChildProps<TextButton>;
+} & ButtonPartProps<TabsTriggerBinding>;
 function TabsTrigger(props: TabsTriggerProps): Vide.Node {
 	const { tabs, group, disabled } = context.use("Tabs.Trigger");
 	const trigger = tabs.trigger(props.value, { disabled: props.disabled, selectFirst: props.selectFirst });
@@ -42,7 +42,7 @@ function TabsTrigger(props: TabsTriggerProps): Vide.Node {
 		trigger.action(instance);
 		group.item(instance, () => read(disabled ?? false) || read(props.disabled ?? false));
 	};
-	return buttonHost(props, "Tabs.Trigger", ["value", "disabled", "selectFirst"], apply);
+	return buttonHost(props, "Tabs.Trigger", ["value", "disabled", "selectFirst"], apply, trigger);
 }
 
 export type TabsContentProps = { value: unknown } & AsChildProps<Frame, ChildFactory> & { children: ChildFactory };

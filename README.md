@@ -131,6 +131,7 @@ Parts are the compound layer over the hooks later in this README. Each primitive
 
 - Vide builds JSX children before their parent, so a root cannot give context to children written inside its tags. Each `Root` except `Topbar.Root` takes its children as a function instead. It sets up the context, then calls the function with the hook's binding. Parts at any depth inside that function read the context. A part rendered outside its root raises an error that names both, such as `Tabs.Trigger must be used inside Tabs.Root`.
 - `Tabs.Content`, `Dialog.Content` and `AlertDialog.Content` also take a children function. It runs each time the content mounts.
+- Button parts take plain children or a function of their binding. The button parts are `Tabs.Trigger`, `Dialog.Trigger`, `Dialog.Close`, `AlertDialog.Action`, `AlertDialog.Cancel` and the roots of `Checkbox`, `Switch`, `Slider` and `TextField`. A trigger or dialog button passes its `PressBinding`, with `selected` added on a tab trigger, and a root passes its hook's binding. Styled children can then read `highlighted`, `pressed` or `selected` directly. With `asChild`, the function returns your element. A function child is always called once with the binding, so return reactive children such as `show(…)` from it rather than passing them directly.
 - A part renders one host, a `textbutton`, `frame` or `textbox`, with Roblox's visible defaults turned off. The text is empty, `AutoButtonColor` is off, and the background is transparent with no border. Parts set no colours or sizes, except that dialog content fills its parent so it can hold selection. Other properties and events pass through to the host and are type-checked against its class.
 - Every part except the roots of `Tabs`, `Dialog`, `AlertDialog` and `Topbar` takes `asChild`. The part then renders nothing of its own and gives its behaviour to your element. The children must resolve to exactly one `GuiObject`. UI modifiers beside it, such as `uicorner`, `uipadding`, `uilistlayout` or `uistroke`, move under it. Anything else raises an error. The part connects its own handlers, so handlers already on your element keep running.
 - Parts write only these properties on their host: `Selectable`, `NextSelectionUp`, `NextSelectionDown`, `NextSelectionLeft`, `NextSelectionRight`, `SelectionImageObject` and the Anvil attributes. Dialog content also writes `SelectionGroup` and the four `SelectionBehavior` properties. A few parts draw state: `Checkbox.Indicator` writes `Visible`, `Slider.Range` writes `Size`, `Slider.Thumb` writes `Position`, and `TextField.Input` writes `Text`, `TextEditable` and `ClearTextOnFocus`. In Studio, an `asChild` control warns when your element already sets one of the selection properties.
@@ -147,8 +148,17 @@ type Page = "General" | "Audio";
 
 function Trigger(props: { value: Page }) {
 	return (
-		<Tabs.Trigger value={props.value} Text={props.value} Size={UDim2.fromOffset(120, 36)}>
-			<uicorner />
+		<Tabs.Trigger value={props.value} asChild>
+			{(trigger) => (
+				<textbutton
+					Text={props.value}
+					Size={UDim2.fromOffset(120, 36)}
+					BackgroundColor3={() => (trigger.selected() ? Color3.fromRGB(255, 214, 102) : Color3.fromRGB(240, 240, 240))}
+					BackgroundTransparency={() => (trigger.highlighted() ? 0 : 0.2)}
+				>
+					<uicorner />
+				</textbutton>
+			)}
 		</Tabs.Trigger>
 	);
 }

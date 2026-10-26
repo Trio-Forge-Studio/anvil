@@ -1,9 +1,9 @@
 import Vide, { effect } from "@rbxts/vide";
 import { Attribute } from "./attributes";
-import { buttonHost, frameHost, partContext, type AsChildProps, type PartContext } from "./part";
+import { buttonHost, frameHost, partContext, type AsChildProps, type ButtonPartProps, type PartContext } from "./part";
 import { useToggle, type ToggleBinding, type ToggleOptions } from "./use-toggle";
 
-export type ToggleRootProps = ToggleOptions & AsChildProps<TextButton, (toggle: ToggleBinding) => Vide.Node>;
+export type ToggleRootProps = ToggleOptions & ButtonPartProps<ToggleBinding>;
 export type ToggleIndicatorProps = AsChildProps<Frame>;
 const options = ["checked", "defaultChecked", "onCheckedChange", "disabled", "selectFirst", "silent"];
 const checkboxContext = partContext<ToggleBinding>("Checkbox.Root");
@@ -11,7 +11,7 @@ const switchContext = partContext<ToggleBinding>("Switch.Root");
 
 function root(context: PartContext<ToggleBinding>, props: ToggleRootProps, part: string): Vide.Node {
 	const toggle = useToggle(props);
-	return context.provide(toggle, () => buttonHost(props, part, options, toggle.action, props.children?.(toggle)));
+	return context.provide(toggle, () => buttonHost(props, part, options, toggle.action, toggle));
 }
 function mark(toggle: ToggleBinding, instance: GuiObject): void {
 	effect(() => instance.SetAttribute(Attribute.Checked, toggle.checked()));

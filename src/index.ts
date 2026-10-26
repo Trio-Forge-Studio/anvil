@@ -28,7 +28,7 @@ export { Checkbox, Switch, type ToggleIndicatorProps, type ToggleRootProps } fro
 export { Slider, type SliderPartProps, type SliderRootProps } from "./slider";
 export { TextField, type TextFieldInputProps, type TextFieldRootProps } from "./text-field";
 export type { Orientation } from "./group";
-export type { AsChildProps, HostProps } from "./part";
+export type { AsChildProps, BindingChildren, ButtonPartProps, HostProps } from "./part";
 export { Topbar, type TopbarIconProps, type TopbarLabelProps, type TopbarRootProps, type TopbarSide } from "./topbar";
 export {
 	AlertDialog,

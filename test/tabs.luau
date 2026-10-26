@@ -118,6 +118,47 @@ return {
 			h.stop()
 		end
 	end,
+	["a trigger's function children read its binding with or without asChild"] = function()
+		local h = setup()
+		local labels, bindings = {}, {}
+		local child
+		h.mount("Base", function()
+			return h.Tabs.Root({
+				defaultValue = "a",
+				children = function()
+					return {
+						h.Tabs.Trigger({
+							value = "a",
+							children = function(trigger)
+								bindings.a = trigger
+								labels.a = h.vide.jsx("textlabel", { Name = "Label" })
+								return labels.a
+							end,
+						}),
+						h.Tabs.Trigger({
+							value = "b",
+							asChild = true,
+							children = function(trigger)
+								bindings.b = trigger
+								child = h.vide.jsx("textbutton", { Name = "B" })
+								return child
+							end,
+						}),
+						h.Tabs.Trigger({ value = "c", children = h.vide.jsx("textlabel", { Name = "Plain" }) }),
+					}
+				end,
+			})
+		end)
+		h.flush()
+		local a = labels.a.Parent
+		assert(a and a.ClassName == "TextButton", "a function child renders inside the trigger")
+		assert(bindings.a.selected() and not bindings.b.selected(), "the binding reports which trigger is active")
+		h.select(child)
+		assert(bindings.b.highlighted() and not bindings.a.highlighted(), "the asChild binding follows its child")
+		child.Activated:Fire()
+		assert(bindings.b.selected() and not bindings.a.selected(), "pressing the asChild child activates it")
+		h.stop()
+	end,
 	["an asChild trigger keeps the child's handlers, adopts its modifiers and disconnects on unmount"] = function()
 		local h = setup()
 		local child = h.instance("TextButton", "Base")

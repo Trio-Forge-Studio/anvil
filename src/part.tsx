@@ -84,13 +84,19 @@ export function slot<T extends GuiObject>(
 	return host as T;
 }
 
-export function buttonHost(
-	props: AsChildProps<TextButton, unknown>,
+// A function child receives the part's binding, so styled children can read its state, with or without asChild.
+export type BindingChildren<B> = Vide.Node | ((binding: B) => Vide.Node);
+export type ButtonPartProps<B> = AsChildProps<TextButton, BindingChildren<B>>;
+
+export function buttonHost<B>(
+	props: ButtonPartProps<B>,
 	part: string,
 	own: readonly string[],
 	apply: (instance: GuiButton) => void,
-	children: Vide.Node = props.children as Vide.Node,
+	binding: B,
 ): Vide.Node {
+	const given = props.children;
+	const children = typeIs(given, "function") ? (given as (binding: B) => Vide.Node)(binding) : given;
 	if (props.asChild) return slot(children, part, "GuiButton", apply, true);
 	return (
 		<textbutton
@@ -98,7 +104,7 @@ export function buttonHost(
 			AutoButtonColor={false}
 			BackgroundTransparency={1}
 			BorderSizePixel={0}
-			{...hostProps(props as AsChildProps<TextButton, unknown> & Record<string, unknown>, own)}
+			{...hostProps(props as ButtonPartProps<B> & Record<string, unknown>, own)}
 			action={chain(apply, props.action)}
 		>
 			{children}

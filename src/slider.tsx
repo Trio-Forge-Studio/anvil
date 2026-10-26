@@ -1,8 +1,8 @@
 import Vide, { effect } from "@rbxts/vide";
-import { buttonHost, frameHost, partContext, type AsChildProps } from "./part";
+import { buttonHost, frameHost, partContext, type AsChildProps, type ButtonPartProps } from "./part";
 import { useSlider, type SliderBinding, type SliderOptions } from "./use-slider";
 
-export type SliderRootProps = SliderOptions & AsChildProps<TextButton, (slider: SliderBinding) => Vide.Node>;
+export type SliderRootProps = SliderOptions & ButtonPartProps<SliderBinding>;
 export type SliderPartProps = AsChildProps<Frame>;
 const options = [
 	"value",
@@ -20,9 +20,7 @@ const context = partContext<SliderBinding>("Slider.Root");
 
 function SliderRoot(props: SliderRootProps): Vide.Node {
 	const slider = useSlider(props);
-	return context.provide(slider, () =>
-		buttonHost(props, "Slider.Root", options, slider.control, props.children?.(slider)),
-	);
+	return context.provide(slider, () => buttonHost(props, "Slider.Root", options, slider.control, slider));
 }
 function SliderTrack(props: SliderPartProps): Vide.Node {
 	const slider = context.use("Slider.Track");

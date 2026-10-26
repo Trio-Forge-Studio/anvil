@@ -81,6 +81,69 @@ return {
 		assert(h.gui.SelectedObject == trigger, "Close also restores the trigger")
 		h.stop()
 	end,
+	["dialog buttons pass their press binding to function children, with or without asChild"] = function()
+		local h = setup()
+		local triggerPress, closePress, actionPress
+		local trigger, close, action
+		h.mount("Base", function()
+			return {
+				h.Dialog.Root({
+					defaultOpen = true,
+					children = function()
+						return {
+							h.Dialog.Trigger({
+								children = function(press)
+									triggerPress = press
+									return h.vide.jsx("textlabel", {})
+								end,
+							}),
+							h.Dialog.Content({
+								children = function()
+									close = h.Dialog.Close({
+										asChild = true,
+										children = function(press)
+											closePress = press
+											return h.vide.jsx("textbutton", { Name = "Close" })
+										end,
+									})
+									return close
+								end,
+							}),
+						}
+					end,
+				}),
+			}
+		end)
+		h.mount("Base", function()
+			return h.AlertDialog.Root({
+				defaultOpen = true,
+				children = function()
+					return h.AlertDialog.Content({
+						children = function()
+							action = h.AlertDialog.Action({
+								children = function(press)
+									actionPress = press
+									return h.vide.jsx("textlabel", {})
+								end,
+							})
+							return action
+						end,
+					})
+				end,
+			})
+		end)
+		h.flush()
+		assert(triggerPress and not triggerPress.highlighted(), "Dialog.Trigger passes its binding")
+		assert(close.Name == "Close" and closePress, "an asChild Close passes its binding and uses the child")
+		h.select(action)
+		assert(actionPress.highlighted() and not closePress.highlighted(), "each binding follows its own host")
+		h.select(close)
+		assert(closePress.highlighted(), "the asChild binding follows the child")
+		local input = { UserInputType = h.enum.UserInputType.MouseButton1 }
+		action.InputBegan:Fire(input)
+		assert(actionPress.pressed() and not closePress.pressed(), "the binding reports its own press")
+		h.stop()
+	end,
 	["a controlled dialog only reports and an asChild content child becomes the trapped root"] = function()
 		local h = setup()
 		local open = h.vide.source(true)

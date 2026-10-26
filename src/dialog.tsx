@@ -1,6 +1,6 @@
 import Vide, { show } from "@rbxts/vide";
 import { useFocusScope } from "./focus-scope";
-import { buttonHost, frameHost, partContext, type AsChildProps, type PartContext } from "./part";
+import { buttonHost, frameHost, partContext, type AsChildProps, type ButtonPartProps, type PartContext } from "./part";
 import type { ChildFactory, Value } from "./props";
 import { closeFallbackContext, ownerContext } from "./runtime";
 import { useControllable } from "./use-controllable";
@@ -52,7 +52,7 @@ function content(dialog: DialogContext, props: DialogContentProps, part: string)
 	});
 }
 
-export type DialogButtonProps = { disabled?: Value<boolean> } & AsChildProps<TextButton>;
+export type DialogButtonProps = { disabled?: Value<boolean> } & ButtonPartProps<PressBinding>;
 export type DialogTriggerProps = DialogButtonProps & { selectFirst?: Value<boolean> };
 function DialogTrigger(props: DialogTriggerProps): Vide.Node {
 	const dialog = dialogContext.use("Dialog.Trigger");
@@ -61,7 +61,7 @@ function DialogTrigger(props: DialogTriggerProps): Vide.Node {
 		disabled: props.disabled,
 		selectFirst: props.selectFirst,
 	});
-	return buttonHost(props, "Dialog.Trigger", ["disabled", "selectFirst"], press.action);
+	return buttonHost(props, "Dialog.Trigger", ["disabled", "selectFirst"], press.action, press);
 }
 
 // Close buttons are the scope's fallback selection when nothing else is selectable.
@@ -82,7 +82,7 @@ function closeButton(
 			selectFirst,
 		});
 	});
-	return buttonHost(props, part, ["disabled", "onPress"], press.action);
+	return buttonHost(props, part, ["disabled", "onPress"], press.action, press);
 }
 function DialogClose(props: DialogButtonProps): Vide.Node {
 	return closeButton(props, "Dialog.Close", dialogContext.use("Dialog.Close"), false);
@@ -109,7 +109,7 @@ function AlertDialogAction(props: AlertDialogButtonProps): Vide.Node {
 		disabled: props.disabled,
 		selectFirst: !dialog.destructive,
 	});
-	return buttonHost(props, "AlertDialog.Action", ["disabled", "onPress"], press.action);
+	return buttonHost(props, "AlertDialog.Action", ["disabled", "onPress"], press.action, press);
 }
 function AlertDialogCancel(props: AlertDialogButtonProps): Vide.Node {
 	const dialog = alertContext.use("AlertDialog.Cancel");
