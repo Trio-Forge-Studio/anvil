@@ -41,6 +41,15 @@ return {
 		assert(button:GetAttribute("Disabled") == true and calls == 0, "disabled icon refuses")
 		h.stop()
 	end,
+	["top bar icons play no feedback, like Roblox's own top bar"] = function()
+		local h = harness()
+		h.device("Keyboard")
+		local button = icon(h, { selected = false, onPress = function() end })
+		button.MouseEnter:Fire()
+		button.Activated:Fire()
+		assert(#h.feedback == 0, "hover and press stay silent")
+		h.stop()
+	end,
 	["top bar icon presses while a modal is open and refuses while the Roblox menu is open"] = function()
 		local h = harness()
 		local calls, hud = 0, 0

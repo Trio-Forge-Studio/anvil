@@ -24,7 +24,7 @@ export function useTopbarIcon(options: TopbarIconOptions): TopbarIconBinding {
 	const device = useAtom(adapter().device);
 	let press!: PressBinding;
 	ownerContext("Topbar", () => {
-		press = usePress({ onPress: options.onPress, disabled: options.disabled });
+		press = usePress({ onPress: options.onPress, disabled: options.disabled, silent: true });
 	});
 	const selected = () => read(options.selected);
 	const notice = () => {
