@@ -135,6 +135,7 @@ Parts are the compound layer over the hooks later in this README. Each primitive
 | Primitive | Parts | Built on |
 | --- | --- | --- |
 | `Tabs` | `Root`, `List`, `Trigger`, `Content` | `useTabs` |
+| `RadioGroup` | `Root`, `Item`, `Indicator` | `useRadioGroup` |
 | `Dialog` | `Root`, `Trigger`, `Content`, `Close` | `FocusScope` |
 | `AlertDialog` | `Root`, `Content`, `Action`, `Cancel` | `FocusScope` |
 | `Checkbox` | `Root`, `Indicator` | `useToggle` |
@@ -146,10 +147,10 @@ Parts are the compound layer over the hooks later in this README. Each primitive
 
 - Vide builds JSX children before their parent, so a root cannot give context to children written inside its tags. Each `Root` except `Topbar.Root` takes its children as a function instead. It sets up the context, then calls the function with the hook's binding. Parts at any depth inside that function read the context. A part rendered outside its root raises an error that names both, such as `Tabs.Trigger must be used inside Tabs.Root`.
 - `Tabs.Content`, `Dialog.Content` and `AlertDialog.Content` also take a children function. It runs each time the content mounts.
-- Button parts take plain children or a function of their binding. The button parts are `Tabs.Trigger`, `Dialog.Trigger`, `Dialog.Close`, `AlertDialog.Action`, `AlertDialog.Cancel` and the roots of `Checkbox`, `Switch`, `Slider` and `TextField`. A trigger or dialog button passes its `PressBinding`, with `selected` added on a tab trigger, and a root passes its hook's binding. Styled children can then read `highlighted`, `pressed` or `selected` directly. With `asChild`, the function returns your element. A function child is always called once with the binding, so return reactive children such as `show(…)` from it rather than passing them directly.
+- Button parts take plain children or a function of their binding. The button parts are `Tabs.Trigger`, `RadioGroup.Item`, `Dialog.Trigger`, `Dialog.Close`, `AlertDialog.Action`, `AlertDialog.Cancel` and the roots of `Checkbox`, `Switch`, `Slider` and `TextField`. A trigger or dialog button passes its `PressBinding`, with `selected` added on a tab trigger and `checked` on a radio item, and a root passes its hook's binding. Styled children can then read `highlighted`, `pressed` or `selected` directly. With `asChild`, the function returns your element. A function child is always called once with the binding, so return reactive children such as `show(…)` from it rather than passing them directly.
 - A part renders one host, a `textbutton`, `frame` or `textbox`, with Roblox's visible defaults turned off. The text is empty, `AutoButtonColor` is off, and the background is transparent with no border. Parts set no colours or sizes, except that dialog content fills its parent so it can hold selection. Other properties and events pass through to the host and are type-checked against its class.
-- Every part except the roots of `Tabs`, `Dialog`, `AlertDialog`, `PanZoom` and `Topbar` takes `asChild`. The part then renders nothing of its own and gives its behaviour to your element. The children must resolve to exactly one `GuiObject`. UI modifiers beside it, such as `uicorner`, `uipadding`, `uilistlayout` or `uistroke`, move under it. Anything else raises an error. The part connects its own handlers, so handlers already on your element keep running.
-- Parts write only these properties on their host: `Selectable`, `NextSelectionUp`, `NextSelectionDown`, `NextSelectionLeft`, `NextSelectionRight`, `SelectionImageObject` and the Anvil attributes. Dialog content also writes `SelectionGroup` and the four `SelectionBehavior` properties. A few parts draw state: `Checkbox.Indicator` writes `Visible`, `Slider.Range` writes `Size`, `Slider.Thumb` writes `Position`, and `TextField.Input` writes `Text`, `TextEditable` and `ClearTextOnFocus`. `PanZoom.Viewport` writes `Active` and adds a `ScaleProbe` frame, and `PanZoom.Content` writes `AnchorPoint`, `Position`, `Size` and `Visible` and adds a `UIScale`. In Studio, an `asChild` control warns when your element already sets one of the selection properties.
+- Every part except the roots of `Tabs`, `RadioGroup`, `Dialog`, `AlertDialog`, `PanZoom` and `Topbar` takes `asChild`. The part then renders nothing of its own and gives its behaviour to your element. The children must resolve to exactly one `GuiObject`. UI modifiers beside it, such as `uicorner`, `uipadding`, `uilistlayout` or `uistroke`, move under it. Anything else raises an error. The part connects its own handlers, so handlers already on your element keep running.
+- Parts write only these properties on their host: `Selectable`, `NextSelectionUp`, `NextSelectionDown`, `NextSelectionLeft`, `NextSelectionRight`, `SelectionImageObject` and the Anvil attributes. Dialog content also writes `SelectionGroup` and the four `SelectionBehavior` properties. A few parts draw state: `Checkbox.Indicator` and `RadioGroup.Indicator` write `Visible`, `Slider.Range` writes `Size`, `Slider.Thumb` writes `Position`, and `TextField.Input` writes `Text`, `TextEditable` and `ClearTextOnFocus`. `PanZoom.Viewport` writes `Active` and adds a `ScaleProbe` frame, and `PanZoom.Content` writes `AnchorPoint`, `Position`, `Size` and `Visible` and adds a `UIScale`. In Studio, an `asChild` control warns when your element already sets one of the selection properties.
 
 ### Tabs
 
@@ -197,6 +198,41 @@ export function SettingsTabs() {
 				</frame>
 			)}
 		</Tabs.Root>
+	);
+}
+```
+
+### Radio group
+
+`RadioGroup.Root` takes `value`, `defaultValue`, `onValueChange` and `disabled`, like `useRadioGroup`, and renders nothing, so the items sit in your own layout. Items register in the order they render and move along the root's `orientation`, `"Vertical"` by default, stopping at both ends unless `loop` is `true`. Unlike tabs, there is no automatic mode: an item is checked only when pressed. Each item writes `Checked`, and `RadioGroup.Indicator` inside an item's children function shows only while that item is checked.
+
+```tsx
+import Vide from "@rbxts/vide";
+import { RadioGroup } from "@trioforge/anvil";
+
+const QUALITIES = ["Low", "Medium", "High"] as const;
+type Quality = (typeof QUALITIES)[number];
+
+export function QualityPicker(props: { onValueChange: (quality: Quality) => void }) {
+	return (
+		<frame Size={UDim2.fromOffset(372, 48)} BackgroundTransparency={1}>
+			<uilistlayout FillDirection={Enum.FillDirection.Horizontal} Padding={new UDim(0, 8)} />
+			<RadioGroup.Root<Quality> defaultValue="Medium" orientation="Horizontal" onValueChange={props.onValueChange}>
+				{() =>
+					QUALITIES.map((quality) => (
+						<RadioGroup.Item value={quality} asChild>
+							{(item) => (
+								<textbutton
+									Text={quality}
+									Size={UDim2.fromOffset(116, 48)}
+									BackgroundColor3={() => (item.checked() ? Color3.fromRGB(255, 214, 102) : Color3.fromRGB(240, 240, 240))}
+								/>
+							)}
+						</RadioGroup.Item>
+					))
+				}
+			</RadioGroup.Root>
+		</frame>
 	);
 }
 ```
@@ -334,6 +370,10 @@ export function SettingsTabs() {
 	return <frame><Trigger tabs={tabs} value="General" /><Trigger tabs={tabs} value="Audio" /></frame>;
 }
 ```
+
+## Radio group
+
+`useRadioGroup` keys items by value, like `useTabs`. Call `item(value)` inside each item's Vide scope. Each binding exposes `checked` and writes `Checked`, and pressing the checked item reports nothing. Items are checked only by a press, never by selection moving onto them. `disabled` on `useRadioGroup` disables every item, and `disabled` on an item disables only that one.
 
 ## Slider
 
