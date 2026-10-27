@@ -20,8 +20,8 @@ It runs `vp check`, rbxtsc, StyLua over the Luau tests, the tests against the co
 
 ## Tests
 
-- Specs live in `test/` and run against the compiled package in `out/` through roblox-ts's runtime. `test/lib/load.luau` returns a `require` for one module realm. Pass `packages`, `services` and `globals` to replace Vide, Charm, Roblox services and engine globals.
-- `test/lib/harness.luau` drives the menu runtime with fake GuiService, UserInputService, instances and a test adapter. Assert what a game can observe: selection, `onClose` calls, presses, feedback kinds and the Menu claim.
+- Specs live in `test/` and run against the compiled package in `out/` through roblox-ts's runtime. `test/lib/load.luau` returns a `require` for one module realm. Pass `packages`, `services` and `globals` to replace Vide, Roblox services and engine globals.
+- `test/lib/harness.luau` drives the menu runtime on Vide's real reactive core, with fake GuiService, UserInputService, instances and a test adapter. Create bindings inside `h.mount`, which runs them in a Vide root. Assert what a game can observe: selection, `onClose` calls, presses, feedback kinds and the Menu claim.
 - Keep pure rules, such as `modal-state`, `selection-policy` and `press-state`, free of engine and framework imports, so specs can load them directly.
 
 ## Docs examples
@@ -50,7 +50,7 @@ env -u PNPM_CONFIG_PM_ON_FAIL -u PNPM_CONFIG_RUNTIME_ON_FAIL pnpm install
 
 ## Conventions
 
-- `src` imports only itself and `@rbxts/vide`, `@rbxts/charm`, `@rbxts/vide-charm` and `@rbxts/services`. Game knowledge belongs in the adapter, never in Anvil.
+- `src` imports only itself and `@rbxts/vide` and `@rbxts/services`. State is Vide `source`, `derive` and `effect`. Module-level derived state lives in a root that is never destroyed. Game knowledge belongs in the adapter, never in Anvil.
 - `src/index.ts` is the public surface. Keep everything else internal.
 - Comment only what the code can't say: a non-obvious reason, a workaround, a trap.
 - Commit messages are Conventional Commits with a scope: `feat(press): …`, `fix(runtime): …`, `test(selection): …`, `docs: …`.

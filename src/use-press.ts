@@ -1,8 +1,8 @@
 import { UserInputService } from "@rbxts/services";
 import { cleanup, derive, effect, read, source, untrack } from "@rbxts/vide";
-import { useAtom } from "@rbxts/vide-charm";
 import { heartbeat } from "./frame-loop";
 import { adapter } from "./adapter";
+import { Attribute } from "./attributes";
 import { menuOpen, textEditing, useSelection } from "./runtime";
 import { idlePress, transition, type PressEvent, type PressMode, type PressState } from "./press-state";
 import type { Value } from "./props";
@@ -16,11 +16,14 @@ export type PressOptions = PressTiming & {
 	selectFirst?: Value<boolean>;
 	silent?: boolean;
 };
-export function usePress(options: PressOptions) {
+export interface PressBinding {
+	highlighted: () => boolean;
+	pressed: () => boolean;
+	progress: () => number;
+	action: (instance: GuiButton) => void;
+}
+export function usePress(options: PressOptions): PressBinding {
 	const host = adapter();
-	const device = useAtom(host.device);
-	const menu = useAtom(menuOpen);
-	const editing = useAtom(textEditing);
 	const hovered = source(false);
 	const state = source<PressState<InputObject>>(idlePress());
 	let timedPress = false;
@@ -34,7 +37,7 @@ export function usePress(options: PressOptions) {
 	};
 	const fire = () =>
 		untrack(() => {
-			if (!selection.allowed() || menu()) return;
+			if (!selection.allowed() || menuOpen()) return;
 			const refused = read(options.disabled ?? false) || options.onPress() === false;
 			if (!options.silent) host.feedback(refused ? "Refused" : "Press");
 		});
@@ -49,7 +52,7 @@ export function usePress(options: PressOptions) {
 		});
 	const begin = (input: InputObject) =>
 		untrack(() => {
-			if (!selection.allowed() || menu() || editing()) return;
+			if (!selection.allowed() || menuOpen() || textEditing()) return;
 			if (state().source === undefined) timedPress = mode().kind !== "Activate";
 			if (read(options.disabled ?? false)) {
 				if (!options.silent && mode().kind !== "Activate") host.feedback("Refused");
@@ -62,7 +65,7 @@ export function usePress(options: PressOptions) {
 		buttonADown: options.hold !== undefined || options.repeating ? begin : undefined,
 		buttonAUp: (input) => update({ kind: "End", source: input }),
 	});
-	const highlighted = derive(() => device() !== "Touch" && (hovered() || selection.selected()));
+	const highlighted = derive(() => host.device() !== "Touch" && (hovered() || selection.selected()));
 	const pressed = derive(() => state().source !== undefined);
 	let previouslySelected = false;
 	effect(() => {
@@ -70,16 +73,18 @@ export function usePress(options: PressOptions) {
 		if (
 			!selection.allowed() ||
 			read(options.disabled ?? false) ||
-			menu() ||
-			editing() ||
+			menuOpen() ||
+			textEditing() ||
 			(previouslySelected && !selected)
 		)
 			update({ kind: "Cancel" });
 		previouslySelected = selected;
 	});
+	let focusPlayed = false;
 	effect(() => {
 		const on = highlighted();
-		if (on && !options.silent) host.feedback("Focus");
+		if (on && !focusPlayed && !options.silent) host.feedback("Focus");
+		focusPlayed = on;
 		untrack(() => options.onHighlightChange?.(on));
 		cleanup(() => {
 			if (on) untrack(() => options.onHighlightChange?.(false));
@@ -99,6 +104,9 @@ export function usePress(options: PressOptions) {
 		progress: () => state().progress,
 		action: (instance: GuiButton) => {
 			selection.action(instance);
+			effect(() => instance.SetAttribute(Attribute.Highlighted, highlighted()));
+			effect(() => instance.SetAttribute(Attribute.Pressed, pressed()));
+			effect(() => instance.SetAttribute(Attribute.Disabled, read(options.disabled ?? false)));
 			cleanup(
 				instance.Activated.Connect(() => {
 					if (!timedPress && mode().kind === "Activate") fire();

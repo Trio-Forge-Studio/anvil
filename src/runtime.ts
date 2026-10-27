@@ -1,21 +1,25 @@
-import { atom, computed, effect } from "@rbxts/charm";
 import { GuiService, UserInputService } from "@rbxts/services";
-import { cleanup, context, effect as videEffect, read, source } from "@rbxts/vide";
-import { useAtom } from "@rbxts/vide-charm";
+import { cleanup, context, derive, effect, read, root, source } from "@rbxts/vide";
 import { adapter, type AnvilAdapter } from "./adapter";
 import type { Value } from "./props";
 import { enter, hasModal, leave, top, type ModalState } from "./modal-state";
 import { decide, emptySelection, type Selection, type SelectionEvent } from "./selection-policy";
+import { pickTopbarIcon } from "./topbar-policy";
 
-export type Owner = number | "Base";
+export type Owner = number | "Base" | "Topbar";
 export const ownerContext = context<Owner>("Base");
 export const closeFallbackContext = context(false);
-const state = atom<ModalState<number>>({ entries: [] });
-export const modalOpen = computed(() => hasModal(state()));
-const topId = computed(() => top(state())?.id);
-export const selectedObject = atom<GuiObject | undefined>();
-export const textEditing = atom(false);
-export const menuOpen = atom(false);
+const state = source<ModalState<number>>({ entries: [] });
+// Never destroyed, so module state stays derived for the life of the realm, inside or outside any Vide scope.
+const [, derived] = root(() => ({
+	modalOpen: derive(() => hasModal(state())),
+	topId: derive(() => top(state())?.id),
+}));
+export const modalOpen = derived.modalOpen;
+const topId = derived.topId;
+export const selectedObject = source<GuiObject | undefined>(undefined);
+export const textEditing = source(false);
+export const menuOpen = source(false);
 interface RootRecord {
 	readonly id: number;
 	readonly serial: number;
@@ -33,6 +37,8 @@ interface Control {
 }
 const roots = new Map<number, RootRecord>();
 const controls = new Map<GuiObject, Control>();
+const topbarIcons = new Map<GuiObject, () => boolean>();
+let lastTopbarIcon: GuiObject | undefined;
 let serial = 0;
 let baseRestore: GuiObject | undefined;
 let writing = false;
@@ -47,10 +53,13 @@ const blankSelectionImage = new Instance("Frame");
 blankSelectionImage.Name = "SelectionImage";
 blankSelectionImage.BackgroundTransparency = 1;
 
+// The top bar draws above every modal, so its icons must stay pressable to close the modal they opened.
 export function active(owner: Owner): boolean {
+	if (owner === "Topbar") return true;
 	return owner === "Base" ? !modalOpen() : topId() === owner;
 }
 function native(owner: Owner): boolean {
+	if (owner === "Topbar") return !modalOpen();
 	return active(owner) && (owner === "Base" || roots.get(owner)?.mode === "Native");
 }
 function finite(value: number): boolean {
@@ -126,7 +135,7 @@ function canSelect(owner: Owner): boolean {
 function request(owner: Owner, target: GuiObject | "Root"): void {
 	cancelRequest();
 	const token = generation;
-	const object = target === "Root" ? (owner === "Base" ? undefined : roots.get(owner)?.root) : target;
+	const object = target === "Root" ? (typeIs(owner, "number") ? roots.get(owner)?.root : undefined) : target;
 	if (!object) return;
 	let queued = false;
 	const retry = () => {
@@ -179,6 +188,7 @@ function selectionChanged(): void {
 	selectedWatch = [];
 	if (capturedA && capturedA.object !== current) cancelA();
 	if (!writing) cancelRequest();
+	if (current && topbarIcons.has(current)) lastTopbarIcon = current;
 	const control = current && controls.get(current);
 	if (current && control && typeIs(control.owner, "number"))
 		dispatch(control.owner, { kind: "Selected", object: current });
@@ -267,6 +277,23 @@ export function registerControl(object: GuiObject, control: Control, fallback = 
 		}
 	};
 }
+export function registerTopbarIcon(object: GuiObject, disabled: () => boolean): () => void {
+	topbarIcons.set(object, disabled);
+	return () => {
+		topbarIcons.delete(object);
+		if (lastTopbarIcon === object) lastTopbarIcon = undefined;
+	};
+}
+function selectTopbarIcon(): void {
+	if (GuiService.SelectedObject !== undefined || !canSelect("Topbar")) return;
+	const candidates = [...topbarIcons].map(([object, disabled]) => ({
+		object,
+		x: object.AbsolutePosition.X,
+		available: alive(object) && !disabled(),
+	}));
+	const target = pickTopbarIcon(candidates, lastTopbarIcon);
+	if (target) request("Topbar", target);
+}
 export function markControl(owner: Owner, object: GuiObject, marked: boolean): void {
 	if (!typeIs(owner, "number")) return;
 	const record = roots.get(owner);
@@ -284,14 +311,12 @@ export function useSelection(
 	const owner = ownerContext();
 	const fallback = closeFallbackContext();
 	const object = source<GuiObject>();
-	const selected = useAtom(selectedObject);
-	const selectable = useAtom(() => native(owner));
-	const allowed = useAtom(() => active(owner));
-	videEffect(() => {
+	const allowed = () => active(owner);
+	effect(() => {
 		const instance = object();
-		if (instance) instance.Selectable = selectable();
+		if (instance) instance.Selectable = native(owner);
 	});
-	videEffect(() => {
+	effect(() => {
 		const instance = object();
 		if (!instance) return;
 		markControl(owner, instance, read(options.selectFirst ?? false));
@@ -299,7 +324,7 @@ export function useSelection(
 	});
 	return {
 		allowed,
-		selected: () => object() !== undefined && selected() === object(),
+		selected: () => object() !== undefined && selectedObject() === object(),
 		action: (instance: GuiObject) => {
 			const unregister = registerControl(
 				instance,
@@ -339,6 +364,9 @@ function start(host: AnvilAdapter): void {
 			capturedA = { object, input, control };
 			control.buttonADown(input);
 		}),
+		UserInputService.InputBegan.Connect((input) => {
+			if (input.KeyCode === Enum.KeyCode.DPadUp) selectTopbarIcon();
+		}),
 		UserInputService.InputEnded.Connect((input) => {
 			if (input.KeyCode === Enum.KeyCode.ButtonA && capturedA?.input.UserInputType === input.UserInputType)
 				cancelA();
@@ -363,7 +391,7 @@ function start(host: AnvilAdapter): void {
 	menuOpen(GuiService.MenuIsOpen);
 	textEditing(UserInputService.GetFocusedTextBox() !== undefined);
 	selectionChanged();
-	const stopEffects = [
+	const [stopEffects] = root(() => {
 		effect(() => {
 			const id = topId();
 			cancelRequest();
@@ -375,7 +403,7 @@ function start(host: AnvilAdapter): void {
 				task.defer(() => {
 					if (topId() === id) dispatch(id, { kind: "Shown" });
 				});
-		}),
+		});
 		effect(() => {
 			const id = topId();
 			const editing = textEditing();
@@ -390,9 +418,9 @@ function start(host: AnvilAdapter): void {
 					task.defer(() => {
 						if (topId() === id) dispatch(id, { kind: "Shown" });
 					});
-				return host.claimMenuInput();
+				cleanup(host.claimMenuInput());
 			}
-		}),
+		});
 		effect(() => {
 			if (host.device() !== "Gamepad") {
 				cancelRequest();
@@ -404,12 +432,12 @@ function start(host: AnvilAdapter): void {
 				task.defer(() => {
 					if (topId() === id) dispatch(id, { kind: "Shown" });
 				});
-		}),
-	];
+		});
+	});
 	stop = () => {
 		disconnect(connections);
 		for (const dispose of stopClose) dispose();
-		for (const cleanupEffect of stopEffects) cleanupEffect();
+		stopEffects();
 		cancelA();
 		cancelRequest();
 		disconnect(selectedWatch);
