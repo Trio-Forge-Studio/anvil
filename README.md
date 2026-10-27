@@ -141,7 +141,7 @@ Parts are the compound layer over the hooks later in this README. Each primitive
 | `Switch` | `Root`, `Thumb` | `useToggle` |
 | `Slider` | `Root`, `Track`, `Range`, `Thumb` | `useSlider` |
 | `TextField` | `Root`, `Input` | `useTextField` |
-| `Topbar` | `Root`, `Icon` | `useTopbarIcon` |
+| `Topbar` | `Root`, `Icon`, `Label` | `useTopbarIcon` |
 
 - Vide builds JSX children before their parent, so a root cannot give context to children written inside its tags. Each `Root` except `Topbar.Root` takes its children as a function instead. It sets up the context, then calls the function with the hook's binding. Parts at any depth inside that function read the context. A part rendered outside its root raises an error that names both, such as `Tabs.Trigger must be used inside Tabs.Root`.
 - `Tabs.Content`, `Dialog.Content` and `AlertDialog.Content` also take a children function. It runs each time the content mounts.
