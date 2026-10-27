@@ -24,7 +24,7 @@
   - `useTabs` takes `value`, `defaultValue`, `onValueChange` and `disabled`. Its `trigger(value)` bindings are keyed by value and write `Selected`. Pressing the selected trigger reports nothing.
   - `useSlider` is a drag slider with mouse, touch, D-pad, arrow key and thumbstick input. It takes `value`, `defaultValue`, `min`, `max`, `step`, `onValueChange` and `onValueCommit`, which runs once per drag or hold that changed the value. Its `control` writes `Dragging`, `Highlighted` and `Disabled`.
   - `useTextField` takes `value`, `defaultValue`, `onValueChange`, `onSubmit` and `onValueCommit`, with `control` for the button and `box` for the `TextBox`.
-  - `AlertDialog` builds on `Modal`. Close runs cancel, and a destructive dialog selects cancel first.
+  - `AlertDialog` closes through cancel on close input, and a destructive dialog selects cancel first.
   - `Topbar.Root` and `Topbar.Icon` draw TopbarPlus-style icons in Roblox's top bar, and `useTopbarIcon` drives your own. Icons take `selected`, `defaultSelected` and `onSelectedChange`, stay pressable while a modal is open, and take DPadUp focus on a gamepad. `Topbar.Label` draws text that can't be pressed, like TopbarPlus's locked label icons.
 
 - [#4](https://github.com/Trio-Forge-Studio/anvil/pull/4) [`99b115d`](https://github.com/Trio-Forge-Studio/anvil/commit/99b115d7607613be2b3ff80f7762078bce9a21e2) Thanks [@Hezaerd](https://github.com/Hezaerd)! - Add `PanZoom` and `usePanZoom`, a headless pan and zoom viewport for maps and skill trees.
