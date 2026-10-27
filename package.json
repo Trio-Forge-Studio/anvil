@@ -1,6 +1,6 @@
 {
 	"name": "@trioforge/anvil",
-	"version": "0.1.3",
+	"version": "0.2.0",
 	"description": "Headless UI primitives for Roblox games, built on Vide",
 	"keywords": [
 		"roblox",
