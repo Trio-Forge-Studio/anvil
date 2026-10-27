@@ -171,6 +171,7 @@ function TopbarIcon(props: TopbarIconProps): Vide.Node {
 		</frame>
 	);
 }
+// Roblox adds an automatic size's padding after the frame's own size constraint, so the text holds the 44 px minimum.
 function TopbarLabel(props: TopbarLabelProps): Vide.Node {
 	const preferred = watch("PreferredTransparency", () => GuiService.PreferredTransparency);
 	return (
@@ -183,7 +184,6 @@ function TopbarLabel(props: TopbarLabelProps): Vide.Node {
 			BackgroundTransparency={() => 0.08 * preferred()}
 		>
 			<Round />
-			<uisizeconstraint MinSize={new Vector2(44, 44)} />
 			<uipadding PaddingLeft={new UDim(0, 15)} PaddingRight={new UDim(0, 17)} />
 			<textlabel
 				Name="Label"
@@ -194,7 +194,9 @@ function TopbarLabel(props: TopbarLabelProps): Vide.Node {
 				TextSize={16}
 				FontFace={new Font("rbxasset://fonts/families/BuilderSans.json", Enum.FontWeight.Bold)}
 				TextColor3={white}
-			/>
+			>
+				<uisizeconstraint MinSize={new Vector2(12, 0)} />
+			</textlabel>
 		</frame>
 	);
 }

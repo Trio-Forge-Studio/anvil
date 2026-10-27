@@ -102,13 +102,13 @@ return {
 		assert(label:IsA("Frame") and label.LayoutOrder == 1, "a label is a plain frame sorted by order")
 		assert(label:FindFirstChild("ClickRegion") == nil and child(label, "Label"):IsA("TextLabel"), "nothing presses")
 		assert(label.AutomaticSize == roblox.Enum.AutomaticSize.X, "the label grows with its text")
-		assert(
-			child(label, "UISizeConstraint").MinSize == roblox.Vector2.new(44, 44),
-			"a short label stays an icon wide"
-		)
 		local padding = child(label, "UIPadding")
 		assert(padding.PaddingLeft.Offset + padding.PaddingRight.Offset == 32, "TopbarPlus pads text by 32 px")
 		local glyphs = child(label, "Label")
+		assert(
+			child(glyphs, "UISizeConstraint").MinSize.X + padding.PaddingLeft.Offset + padding.PaddingRight.Offset == 44,
+			"a short label stays an icon wide"
+		)
 		assert(glyphs.TextSize == 16 and glyphs.FontFace.Weight == roblox.Enum.FontWeight.Bold, "TopbarPlus text style")
 		text("60 FPS")
 		assert(glyphs.Text == "60 FPS", "the text follows its source")
