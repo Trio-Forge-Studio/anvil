@@ -27,6 +27,19 @@ export { usePanZoom, type PanZoomBinding, type PanZoomOptions } from "./use-pan-
 export type { PanZoomInset, PanZoomView } from "./pan-zoom-state";
 export { PanZoom, type PanZoomContentProps, type PanZoomRootProps, type PanZoomViewportProps } from "./pan-zoom";
 export { Tabs, type TabsContentProps, type TabsListProps, type TabsRootProps, type TabsTriggerProps } from "./tabs";
+export {
+	RadioGroup,
+	type RadioGroupIndicatorProps,
+	type RadioGroupItemProps,
+	type RadioGroupRootProps,
+} from "./radio-group";
+export {
+	useRadioGroup,
+	type RadioGroupBinding,
+	type RadioGroupItemBinding,
+	type RadioGroupItemOptions,
+	type RadioGroupOptions,
+} from "./use-radio-group";
 export { Checkbox, Switch, type ToggleIndicatorProps, type ToggleRootProps } from "./toggle";
 export { Slider, type SliderPartProps, type SliderRootProps } from "./slider";
 export { TextField, type TextFieldInputProps, type TextFieldRootProps } from "./text-field";
