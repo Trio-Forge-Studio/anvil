@@ -1,4 +1,4 @@
-import { UserInputService } from "@rbxts/services";
+import { GuiService, UserInputService } from "@rbxts/services";
 import { batch, cleanup, derive, effect, source, untrack } from "@rbxts/vide";
 import { Attribute } from "./attributes";
 import { heartbeat } from "./frame-loop";
@@ -113,6 +113,11 @@ export function usePanZoom(options: PanZoomOptions): PanZoomBinding {
 			const current = view();
 			if (wanted.pan !== current.pan || wanted.zoom !== current.zoom) write(wanted);
 		});
+	const glideTo = (target: Vector2) => {
+		if (!GuiService.ReducedMotionEnabled) return glide(target);
+		glide(undefined);
+		commit(target, view().zoom);
+	};
 	const zoomAt = (zoom: number, anchor: Vector2) =>
 		untrack(() => {
 			const zoomed = zoomAround(view(), math.clamp(zoom, minZoom, maxZoom), anchor, fit());
@@ -272,7 +277,7 @@ export function usePanZoom(options: PanZoomOptions): PanZoomBinding {
 				const centre = selected.AbsolutePosition.add(selected.AbsoluteSize.div(2));
 				const point = centre.sub(box.AbsolutePosition).div(size).mul(contentSize);
 				const target = revealPan(view().pan, offsetOf(point), scale(), area, safeArea);
-				if (target !== undefined) glide(clampPan(target, scale(), area));
+				if (target !== undefined) glideTo(clampPan(target, scale(), area));
 			});
 		});
 
@@ -285,7 +290,7 @@ export function usePanZoom(options: PanZoomOptions): PanZoomBinding {
 		panTo: (point, panOptions) =>
 			untrack(() => {
 				const target = clampPan(contentSize.div(2).sub(point), scale(), half());
-				if (panOptions?.glide) glide(target);
+				if (panOptions?.glide) glideTo(target);
 				else {
 					glide(undefined);
 					commit(target, view().zoom);

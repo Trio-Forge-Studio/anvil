@@ -407,6 +407,23 @@ return {
 		assert(content.Position == roblox.UDim2.new(0.5, 60, 0.5, 0), "the applied view moves the content")
 		h.stop()
 	end,
+	["reduced motion turns glides into jumps"] = function()
+		local h = harness()
+		h.gui.ReducedMotionEnabled = true
+		local binding, viewport, content = mount(h, { contentSize = Vector2.new(2000, 2000), fit = fitOne })
+		layout(viewport, Vector2.new(800, 600), Vector2.new(0, 0))
+		content.AbsolutePosition = Vector2.new(400, 300) - Vector2.new(1000, 1000)
+		content.AbsoluteSize = Vector2.new(2000, 2000)
+		local far = h.instance("TextButton")
+		far.Parent = content
+		far.AbsoluteSize = Vector2.new(100, 60)
+		far.AbsolutePosition = content.AbsolutePosition + Vector2.new(1850, 1000) - far.AbsoluteSize / 2
+		h.select(far)
+		near(binding.view().pan, Vector2.new(-550, 0), "follow selection jumps to the safe area")
+		binding.panTo(Vector2.new(1000, 1000), { glide = true })
+		near(binding.view().pan, Vector2.zero, "a gliding panTo lands at once")
+		h.stop()
+	end,
 	["panTo can glide and zoomTo keeps a content anchor in place"] = function()
 		local h = harness()
 		local binding, viewport = mount(h, { contentSize = Vector2.new(1600, 1200), fit = fitOne })
