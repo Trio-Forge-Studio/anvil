@@ -16,7 +16,14 @@ export interface TopbarIconProps extends TopbarIconOptions {
 	caption?: Value<string>;
 	order: number;
 }
+export interface TopbarLabelProps {
+	name: string;
+	text: Value<string>;
+	order: number;
+}
 const rightEdge = 12;
+const white = new Color3(1, 1, 1);
+const surface = Color3.fromRGB(18, 18, 21);
 function measure() {
 	const [inset] = GuiService.GetGuiInset();
 	return topbarLayout(GuiService.TopbarInset.Height, inset.Y, GuiService.IsTenFootInterface());
@@ -66,7 +73,6 @@ function TopbarIcon(props: TopbarIconProps): Vide.Node {
 	const icon = useTopbarIcon(props);
 	const preferred = watch("PreferredTransparency", () => GuiService.PreferredTransparency);
 	const center = new Vector2(0.5, 0.5);
-	const white = new Color3(1, 1, 1);
 	return (
 		<frame Name={props.name} LayoutOrder={props.order} Size={UDim2.fromOffset(44, 44)} BackgroundTransparency={1}>
 			<textbutton
@@ -74,7 +80,7 @@ function TopbarIcon(props: TopbarIconProps): Vide.Node {
 				Text=""
 				AutoButtonColor={false}
 				Size={UDim2.fromScale(1, 1)}
-				BackgroundColor3={Color3.fromRGB(18, 18, 21)}
+				BackgroundColor3={surface}
 				BackgroundTransparency={() => 0.08 * preferred()}
 				action={icon.action}
 			>
@@ -165,4 +171,31 @@ function TopbarIcon(props: TopbarIconProps): Vide.Node {
 		</frame>
 	);
 }
-export const Topbar = { Root: TopbarRoot, Icon: TopbarIcon };
+function TopbarLabel(props: TopbarLabelProps): Vide.Node {
+	const preferred = watch("PreferredTransparency", () => GuiService.PreferredTransparency);
+	return (
+		<frame
+			Name={props.name}
+			LayoutOrder={props.order}
+			Size={UDim2.fromOffset(0, 44)}
+			AutomaticSize={Enum.AutomaticSize.X}
+			BackgroundColor3={surface}
+			BackgroundTransparency={() => 0.08 * preferred()}
+		>
+			<Round />
+			<uisizeconstraint MinSize={new Vector2(44, 44)} />
+			<uipadding PaddingLeft={new UDim(0, 15)} PaddingRight={new UDim(0, 17)} />
+			<textlabel
+				Name="Label"
+				Size={UDim2.fromScale(0, 1)}
+				AutomaticSize={Enum.AutomaticSize.X}
+				BackgroundTransparency={1}
+				Text={props.text}
+				TextSize={16}
+				FontFace={new Font("rbxasset://fonts/families/BuilderSans.json", Enum.FontWeight.Bold)}
+				TextColor3={white}
+			/>
+		</frame>
+	);
+}
+export const Topbar = { Root: TopbarRoot, Icon: TopbarIcon, Label: TopbarLabel };

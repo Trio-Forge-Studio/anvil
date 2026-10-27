@@ -61,6 +61,7 @@ local classes = {
 	uigradient = "UIGradient",
 	uilistlayout = "UIListLayout",
 	uipadding = "UIPadding",
+	uisizeconstraint = "UISizeConstraint",
 	uistroke = "UIStroke",
 }
 local function harness(options: { deferredText: boolean }?): Mock

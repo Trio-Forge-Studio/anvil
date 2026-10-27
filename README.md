@@ -269,6 +269,7 @@ mount(
 - An icon stays pressable while a modal is open, so it can close the modal it opened. The Roblox menu still blocks it.
 - On a gamepad in play mode, DPadUp selects the last selected icon, or else the leftmost visible, enabled icon.
 - The caption appears after half a second of mouse hover and never on touch or gamepad.
+- `Topbar.Label` draws plain text in the same pill, such as a frame-rate readout. It takes `name`, `text` and `order`, grows with its text and can't be pressed or selected.
 - To draw your own icon, call `useTopbarIcon` with the same options and attach its `action` to a button inside `Topbar.Root`. It writes `Highlighted`, `Pressed`, `Disabled`, `Selected` and a numeric `Notice` attribute, and returns `captionShown` for your caption.
 
 ## License

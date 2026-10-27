@@ -87,4 +87,33 @@ return {
 		assert(spot.BackgroundTransparency == 0.7 and child(spot, "UIGradient").Enabled, "selection lights the spot")
 		h.stop()
 	end,
+	["default top bar label draws text that cannot be pressed or selected"] = function()
+		local h = harness()
+		local Topbar = h.require("topbar")
+		local text = h.vide.source("-- FPS")
+		local gui = h.mount("Base", function()
+			return Topbar.Topbar.Root({
+				side = "Left",
+				displayOrder = 12,
+				children = { Topbar.Topbar.Label({ name = "FrameRate", text = text, order = 1 }) },
+			})
+		end)
+		local label = child(gui, "Icons", "FrameRate")
+		assert(label:IsA("Frame") and label.LayoutOrder == 1, "a label is a plain frame sorted by order")
+		assert(label:FindFirstChild("ClickRegion") == nil and child(label, "Label"):IsA("TextLabel"), "nothing presses")
+		assert(label.AutomaticSize == roblox.Enum.AutomaticSize.X, "the label grows with its text")
+		assert(
+			child(label, "UISizeConstraint").MinSize == roblox.Vector2.new(44, 44),
+			"a short label stays an icon wide"
+		)
+		local padding = child(label, "UIPadding")
+		assert(padding.PaddingLeft.Offset + padding.PaddingRight.Offset == 32, "TopbarPlus pads text by 32 px")
+		local glyphs = child(label, "Label")
+		assert(glyphs.TextSize == 16 and glyphs.FontFace.Weight == roblox.Enum.FontWeight.Bold, "TopbarPlus text style")
+		text("60 FPS")
+		assert(glyphs.Text == "60 FPS", "the text follows its source")
+		h.gui.PreferredTransparency = 0.5
+		assert(math.abs(label.BackgroundTransparency - 0.04) < 1e-6, "PreferredTransparency scales the background")
+		h.stop()
+	end,
 }
