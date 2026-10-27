@@ -142,13 +142,14 @@ Parts are the compound layer over the hooks later in this README. Each primitive
 | `Slider` | `Root`, `Track`, `Range`, `Thumb` | `useSlider` |
 | `TextField` | `Root`, `Input` | `useTextField` |
 | `Topbar` | `Root`, `Icon`, `Label` | `useTopbarIcon` |
+| `PanZoom` | `Root`, `Viewport`, `Content` | `usePanZoom` |
 
 - Vide builds JSX children before their parent, so a root cannot give context to children written inside its tags. Each `Root` except `Topbar.Root` takes its children as a function instead. It sets up the context, then calls the function with the hook's binding. Parts at any depth inside that function read the context. A part rendered outside its root raises an error that names both, such as `Tabs.Trigger must be used inside Tabs.Root`.
 - `Tabs.Content`, `Dialog.Content` and `AlertDialog.Content` also take a children function. It runs each time the content mounts.
 - Button parts take plain children or a function of their binding. The button parts are `Tabs.Trigger`, `Dialog.Trigger`, `Dialog.Close`, `AlertDialog.Action`, `AlertDialog.Cancel` and the roots of `Checkbox`, `Switch`, `Slider` and `TextField`. A trigger or dialog button passes its `PressBinding`, with `selected` added on a tab trigger, and a root passes its hook's binding. Styled children can then read `highlighted`, `pressed` or `selected` directly. With `asChild`, the function returns your element. A function child is always called once with the binding, so return reactive children such as `show(…)` from it rather than passing them directly.
 - A part renders one host, a `textbutton`, `frame` or `textbox`, with Roblox's visible defaults turned off. The text is empty, `AutoButtonColor` is off, and the background is transparent with no border. Parts set no colours or sizes, except that dialog content fills its parent so it can hold selection. Other properties and events pass through to the host and are type-checked against its class.
-- Every part except the roots of `Tabs`, `Dialog`, `AlertDialog` and `Topbar` takes `asChild`. The part then renders nothing of its own and gives its behaviour to your element. The children must resolve to exactly one `GuiObject`. UI modifiers beside it, such as `uicorner`, `uipadding`, `uilistlayout` or `uistroke`, move under it. Anything else raises an error. The part connects its own handlers, so handlers already on your element keep running.
-- Parts write only these properties on their host: `Selectable`, `NextSelectionUp`, `NextSelectionDown`, `NextSelectionLeft`, `NextSelectionRight`, `SelectionImageObject` and the Anvil attributes. Dialog content also writes `SelectionGroup` and the four `SelectionBehavior` properties. A few parts draw state: `Checkbox.Indicator` writes `Visible`, `Slider.Range` writes `Size`, `Slider.Thumb` writes `Position`, and `TextField.Input` writes `Text`, `TextEditable` and `ClearTextOnFocus`. In Studio, an `asChild` control warns when your element already sets one of the selection properties.
+- Every part except the roots of `Tabs`, `Dialog`, `AlertDialog`, `PanZoom` and `Topbar` takes `asChild`. The part then renders nothing of its own and gives its behaviour to your element. The children must resolve to exactly one `GuiObject`. UI modifiers beside it, such as `uicorner`, `uipadding`, `uilistlayout` or `uistroke`, move under it. Anything else raises an error. The part connects its own handlers, so handlers already on your element keep running.
+- Parts write only these properties on their host: `Selectable`, `NextSelectionUp`, `NextSelectionDown`, `NextSelectionLeft`, `NextSelectionRight`, `SelectionImageObject` and the Anvil attributes. Dialog content also writes `SelectionGroup` and the four `SelectionBehavior` properties. A few parts draw state: `Checkbox.Indicator` writes `Visible`, `Slider.Range` writes `Size`, `Slider.Thumb` writes `Position`, and `TextField.Input` writes `Text`, `TextEditable` and `ClearTextOnFocus`. `PanZoom.Viewport` writes `Active` and adds a `ScaleProbe` frame, and `PanZoom.Content` writes `AnchorPoint`, `Position`, `Size` and `Visible` and adds a `UIScale`. In Studio, an `asChild` control warns when your element already sets one of the selection properties.
 
 ### Tabs
 
@@ -376,6 +377,64 @@ export function NameField(props: { onValueCommit: (name: string) => void }) {
 	</textbutton>;
 }
 ```
+
+## Pan and zoom
+
+`PanZoom` is a viewport onto content larger than the screen, such as a world map or a skill tree. `PanZoom.Root` takes the `usePanZoom` options and passes its binding to the children function. `PanZoom.Viewport` renders a transparent `Frame` that fills its parent and receives input. `PanZoom.Content` holds your content at `contentSize` logical pixels, centred in the viewport, moved by the pan and scaled by a `UIScale`. It stays hidden until the viewport has a size.
+
+```tsx
+import Vide from "@rbxts/vide";
+import { PanZoom, usePress } from "@trioforge/anvil";
+
+const mapSize = new Vector2(1200, 800);
+const pins = [new Vector2(200, 150), new Vector2(600, 400), new Vector2(1000, 650)];
+
+function Pin(props: { point: Vector2; onPress: () => void }) {
+	const press = usePress({ onPress: props.onPress });
+	return (
+		<textbutton
+			action={press.action}
+			AnchorPoint={new Vector2(0.5, 0.5)}
+			Position={UDim2.fromOffset(props.point.X, props.point.Y)}
+			Size={UDim2.fromOffset(120, 48)}
+			BackgroundColor3={() => (press.highlighted() ? Color3.fromRGB(255, 214, 102) : Color3.fromRGB(240, 240, 240))}
+		/>
+	);
+}
+
+export function WorldMap() {
+	return (
+		<PanZoom.Root contentSize={mapSize} maxZoom={2} gamepad={{ pan: true, zoom: true }}>
+			{(map) => (
+				<PanZoom.Viewport ClipsDescendants>
+					<PanZoom.Content>
+						<imagelabel Image="rbxassetid://0" Size={UDim2.fromScale(1, 1)} />
+						{pins.map((point) => (
+							<Pin point={point} onPress={() => map.panTo(point, { glide: true })} />
+						))}
+					</PanZoom.Content>
+					<textlabel
+						Text={() => `${math.round(map.view().zoom * 100)}%`}
+						Position={UDim2.fromOffset(12, 12)}
+						Size={UDim2.fromOffset(80, 24)}
+					/>
+				</PanZoom.Viewport>
+			)}
+		</PanZoom.Root>
+	);
+}
+```
+
+- The left mouse button or a single touch drags the content. The mouse wheel zooms by 1.15 per notch around the cursor. It zooms only when the cursor is over the viewport and the topmost `Active` or opaque `GuiObject` there is the viewport itself or inside `PanZoom.Content`, so an opaque overlay such as a tooltip blocks it. A two-finger pinch that starts over the viewport zooms around its midpoint and cancels the drag.
+- The zoom stays between `minZoom` and `maxZoom`, 0.5 and 1.6 by default. Each pan passes through `clampPan(pan, scale, half)`. The default keeps content larger than the viewport covering it and centres smaller content, on each axis.
+- At zoom 1, the content is scaled by `fit(viewportSize)`, which by default fits the whole content inside the viewport. The viewport is measured in logical pixels, so a `UIScale` above it changes neither the fit nor drag distances. A transparent `ScaleProbe` frame in the viewport measures that scale. The fit is measured again when the viewport or that scale changes size.
+- When gamepad selection moves to a control inside the content, the view glides until the control's centre is at least 100 pixels inside each edge of the viewport. Pass `followSelection={{ inset: { topLeft, bottomRight } }}` to change the insets, or `false` to turn it off. Mouse hover and touch never select a control, so they never move the view.
+- `panTo(point, { glide })` centres a content point, for example a node the player tapped. `zoomTo(zoom, anchor)` zooms around a content point, or around the viewport centre without one.
+- With Reduced Motion on, both selection following and `panTo(point, { glide: true })` jump straight to their target.
+- `gamepad={{ pan: true, zoom: true }}` adds gamepad controls. The right thumbstick pans at up to 900 pixels a second past a 0.2 deadzone, and R2 and L2 zoom in and out around the viewport centre, by a factor of 2 each second. Anvil only listens to this input, so the left thumbstick and the D-pad keep moving Roblox's selection.
+- Nothing moves while a trapped scope above the owner of the pan zoom is open or while the Roblox menu is open. A drag ends and a glide stops. Gamepad controls also stop while text is being edited or the viewport is hidden.
+- The view, `{ pan, zoom }`, is controllable through `view`, `defaultView` and `onViewChange`. The pan is in content pixels: the offset of the content centre from the viewport centre before scaling. A content point `p` sits `(p - contentSize / 2 + view().pan) * scale()` logical pixels from the viewport centre, where `scale()` is `fit() * view().zoom`. Use that with `half()`, half the viewport's logical size, to place overlays such as tooltips inside `PanZoom.Viewport`.
+- The viewport writes `Dragging`. Call `usePanZoom` directly and attach `viewport` and `content` to your own frames to skip the parts.
 
 ## Top bar
 
