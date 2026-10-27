@@ -61,7 +61,6 @@ local classes = {
 	uigradient = "UIGradient",
 	uilistlayout = "UIListLayout",
 	uipadding = "UIPadding",
-	uisizeconstraint = "UISizeConstraint",
 	uistroke = "UIStroke",
 }
 local function harness(options: { deferredText: boolean }?): Mock
@@ -294,12 +293,22 @@ local function harness(options: { deferredText: boolean }?): Mock
 	local device = vide.source("Gamepad")
 	local contexts = {}
 	local feedback: { string } = {}
+	local text = {
+		width = function(params): number
+			return #params.Text * 8
+		end,
+	}
 	local require = load({
 		packages = {
 			["@rbxts/vide"] = vide,
 			["@rbxts/services"] = {
 				GuiService = gui,
 				UserInputService = input,
+				TextService = {
+					GetTextBoundsAsync = function(_self, params)
+						return roblox.Vector2.new(text.width(params), params.Size)
+					end,
+				},
 				RunService = { Heartbeat = heartbeat, PreRender = signal() },
 			},
 		},
@@ -368,6 +377,7 @@ local function harness(options: { deferredText: boolean }?): Mock
 		device = device,
 		contexts = contexts,
 		feedback = feedback,
+		text = text,
 		enum = roblox.Enum,
 		vide = vide,
 	}

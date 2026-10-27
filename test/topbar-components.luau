@@ -87,31 +87,38 @@ return {
 		assert(spot.BackgroundTransparency == 0.7 and child(spot, "UIGradient").Enabled, "selection lights the spot")
 		h.stop()
 	end,
-	["default top bar label draws text that cannot be pressed or selected"] = function()
+	["default top bar label measures its text and cannot be pressed or selected"] = function()
 		local h = harness()
+		local widths = { ["1 ms"] = 27, ["2 ms"] = 30, ["1"] = 5 }
+		h.text.width = function(params)
+			assert(params.Size == 16 and params.Font.Weight == roblox.Enum.FontWeight.Bold, "TopbarPlus text style")
+			return widths[params.Text] or 40
+		end
 		local Topbar = h.require("topbar")
-		local text = h.vide.source("-- FPS")
+		local text = h.vide.source("2 ms")
 		local gui = h.mount("Base", function()
 			return Topbar.Topbar.Root({
 				side = "Left",
 				displayOrder = 12,
-				children = { Topbar.Topbar.Label({ name = "FrameRate", text = text, order = 1 }) },
+				children = { Topbar.Topbar.Label({ name = "Ping", text = text, order = 1 }) },
 			})
 		end)
-		local label = child(gui, "Icons", "FrameRate")
-		assert(label:IsA("Frame") and label.LayoutOrder == 1, "a label is a plain frame sorted by order")
-		assert(label:FindFirstChild("ClickRegion") == nil and child(label, "Label"):IsA("TextLabel"), "nothing presses")
-		assert(label.AutomaticSize == roblox.Enum.AutomaticSize.X, "the label grows with its text")
-		local padding = child(label, "UIPadding")
-		assert(padding.PaddingLeft.Offset + padding.PaddingRight.Offset == 32, "TopbarPlus pads text by 32 px")
+		local label = child(gui, "Icons", "Ping")
 		local glyphs = child(label, "Label")
-		assert(
-			child(glyphs, "UISizeConstraint").MinSize.X + padding.PaddingLeft.Offset + padding.PaddingRight.Offset == 44,
-			"a short label stays an icon wide"
-		)
+		assert(label:IsA("Frame") and label.LayoutOrder == 1, "a label is a plain frame sorted by order")
+		assert(label:FindFirstChild("ClickRegion") == nil and glyphs:IsA("TextLabel"), "nothing presses")
 		assert(glyphs.TextSize == 16 and glyphs.FontFace.Weight == roblox.Enum.FontWeight.Bold, "TopbarPlus text style")
-		text("60 FPS")
-		assert(glyphs.Text == "60 FPS", "the text follows its source")
+		assert(glyphs.Position == roblox.UDim2.fromOffset(15, 0), "TopbarPlus leaves 15 px left of the text")
+		assert(glyphs.Size == roblox.UDim2.new(1, -32, 1, 0), "and 17 px right of it")
+		h.flush()
+		assert(label.Size == roblox.UDim2.fromOffset(62, 44), "the pill is the text width plus 32 px")
+		text("1 ms")
+		assert(glyphs.Text == "1 ms", "the text follows its source")
+		h.flush()
+		assert(label.Size == roblox.UDim2.fromOffset(59, 44), "text of the same length is measured again")
+		text("1")
+		h.flush()
+		assert(label.Size == roblox.UDim2.fromOffset(44, 44), "a short label stays an icon wide")
 		h.gui.PreferredTransparency = 0.5
 		assert(math.abs(label.BackgroundTransparency - 0.04) < 1e-6, "PreferredTransparency scales the background")
 		h.stop()

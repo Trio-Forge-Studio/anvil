@@ -1,5 +1,5 @@
-import { GuiService } from "@rbxts/services";
-import Vide, { cleanup, source } from "@rbxts/vide";
+import { GuiService, TextService } from "@rbxts/services";
+import Vide, { cleanup, effect, read, source } from "@rbxts/vide";
 import type { Children, Value } from "./props";
 import { topbarLayout } from "./topbar-policy";
 import { useTopbarIcon, type TopbarIconOptions } from "./use-topbar-icon";
@@ -24,6 +24,8 @@ export interface TopbarLabelProps {
 const rightEdge = 12;
 const white = new Color3(1, 1, 1);
 const surface = Color3.fromRGB(18, 18, 21);
+const labelFont = new Font("rbxasset://fonts/families/BuilderSans.json", Enum.FontWeight.Bold);
+const labelTextSize = 16;
 function measure() {
 	const [inset] = GuiService.GetGuiInset();
 	return topbarLayout(GuiService.TopbarInset.Height, inset.Y, GuiService.IsTenFootInterface());
@@ -171,32 +173,44 @@ function TopbarIcon(props: TopbarIconProps): Vide.Node {
 		</frame>
 	);
 }
-// Roblox adds an automatic size's padding after the frame's own size constraint, so the text holds the 44 px minimum.
+// Roblox can keep an automatic size when the text changes to a string of the same length, so the label measures it.
 function TopbarLabel(props: TopbarLabelProps): Vide.Node {
 	const preferred = watch("PreferredTransparency", () => GuiService.PreferredTransparency);
+	const width = source(0);
+	effect(() => {
+		const params = new Instance("GetTextBoundsParams");
+		params.Text = read(props.text);
+		params.Font = labelFont;
+		params.Size = labelTextSize;
+		params.Width = math.huge;
+		let current = true;
+		cleanup(() => {
+			current = false;
+		});
+		task.defer(() => {
+			const [ok, bounds] = pcall(() => TextService.GetTextBoundsAsync(params));
+			if (ok && current) width(math.ceil(bounds.X));
+		});
+	});
 	return (
 		<frame
 			Name={props.name}
 			LayoutOrder={props.order}
-			Size={UDim2.fromOffset(0, 44)}
-			AutomaticSize={Enum.AutomaticSize.X}
+			Size={() => UDim2.fromOffset(math.max(width() + 32, 44), 44)}
 			BackgroundColor3={surface}
 			BackgroundTransparency={() => 0.08 * preferred()}
 		>
 			<Round />
-			<uipadding PaddingLeft={new UDim(0, 15)} PaddingRight={new UDim(0, 17)} />
 			<textlabel
 				Name="Label"
-				Size={UDim2.fromScale(0, 1)}
-				AutomaticSize={Enum.AutomaticSize.X}
+				Position={UDim2.fromOffset(15, 0)}
+				Size={new UDim2(1, -32, 1, 0)}
 				BackgroundTransparency={1}
 				Text={props.text}
-				TextSize={16}
-				FontFace={new Font("rbxasset://fonts/families/BuilderSans.json", Enum.FontWeight.Bold)}
+				TextSize={labelTextSize}
+				FontFace={labelFont}
 				TextColor3={white}
-			>
-				<uisizeconstraint MinSize={new Vector2(12, 0)} />
-			</textlabel>
+			/>
 		</frame>
 	);
 }
