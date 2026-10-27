@@ -3,7 +3,7 @@ import { cleanup, derive, effect, read, source, untrack } from "@rbxts/vide";
 import { heartbeat } from "./frame-loop";
 import { adapter } from "./adapter";
 import { Attribute } from "./attributes";
-import { menuOpen, textEditing, useSelection } from "./runtime";
+import { menuOpen, pressing, textEditing, useSelection } from "./runtime";
 import { idlePress, transition, type PressEvent, type PressMode, type PressState } from "./press-state";
 import type { Value } from "./props";
 
@@ -38,7 +38,7 @@ export function usePress(options: PressOptions): PressBinding {
 	const fire = () =>
 		untrack(() => {
 			if (!selection.allowed() || menuOpen()) return;
-			const refused = read(options.disabled ?? false) || options.onPress() === false;
+			const refused = read(options.disabled ?? false) || pressing(selection.object(), options.onPress) === false;
 			if (!options.silent) host.feedback(refused ? "Refused" : "Press");
 		});
 	const update = (event: PressEvent<InputObject>) =>

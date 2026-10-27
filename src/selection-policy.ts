@@ -8,6 +8,7 @@ export type SelectionEvent<T> =
 	| { readonly kind: "Marked"; readonly object: T; readonly replaces?: T }
 	| { readonly kind: "Unmarked"; readonly object: T }
 	| { readonly kind: "Selected"; readonly object: T }
+	| { readonly kind: "Restore"; readonly object: T }
 	| { readonly kind: "Lost"; readonly removed: boolean };
 export interface PolicyContext<T extends defined> {
 	readonly current?: T;
@@ -64,12 +65,23 @@ export function decide<T extends defined>(
 			};
 		case "Selected":
 			return { selection: { ...selection, remembered: event.object, paused: false } };
-		case "Lost":
-			return event.removed
-				? {
-						selection: { ...selection, remembered: undefined },
-						target: context.canSelect && !selection.paused ? fallback(selection, context) : undefined,
-					}
-				: { selection: { ...selection, paused: true } };
+		case "Restore":
+			return {
+				selection: { ...selection, remembered: event.object },
+				target:
+					context.canSelect && !selection.paused && context.current === undefined ? event.object : undefined,
+			};
+		case "Lost": {
+			if (!event.removed) return { selection: { ...selection, paused: true } };
+			const remembered =
+				selection.remembered !== undefined && context.alive(selection.remembered)
+					? selection.remembered
+					: undefined;
+			return {
+				selection: { ...selection, remembered },
+				target:
+					context.canSelect && !selection.paused ? (remembered ?? fallback(selection, context)) : undefined,
+			};
+		}
 	}
 }

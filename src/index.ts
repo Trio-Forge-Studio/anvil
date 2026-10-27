@@ -1,5 +1,12 @@
 export { installAnvil, type AnvilAdapter, type CloseInput, type InputDevice, type PressFeedback } from "./adapter";
-export { Modal, modalOpen, useModalActive, useTextEditing, type ModalProps } from "./modal";
+export {
+	FocusScope,
+	modalOpen,
+	useModalActive,
+	useTextEditing,
+	type FocusScopeOptions,
+	type FocusScopeProps,
+} from "./focus-scope";
 export { closeFallbackContext, startMenuRuntime, useSelection } from "./runtime";
 export { usePress, type PressBinding, type PressOptions, type PressTiming } from "./use-press";
 export { Attribute } from "./attributes";
@@ -7,6 +14,7 @@ export { useControllable, type ControllableOptions } from "./use-controllable";
 export { useToggle, type ToggleBinding, type ToggleOptions } from "./use-toggle";
 export {
 	useTabs,
+	type TabsActivationMode,
 	type TabsBinding,
 	type TabsOptions,
 	type TabsTriggerBinding,
@@ -15,8 +23,25 @@ export {
 export { useSlider, type SliderBinding, type SliderOptions } from "./use-slider";
 export { useTextField, type TextFieldBinding, type TextFieldOptions } from "./use-text-field";
 export { useTopbarIcon, type TopbarIconBinding, type TopbarIconOptions } from "./use-topbar-icon";
+export { Tabs, type TabsContentProps, type TabsListProps, type TabsRootProps, type TabsTriggerProps } from "./tabs";
+export { Checkbox, Switch, type ToggleIndicatorProps, type ToggleRootProps } from "./toggle";
+export { Slider, type SliderPartProps, type SliderRootProps } from "./slider";
+export { TextField, type TextFieldInputProps, type TextFieldRootProps } from "./text-field";
+export type { Orientation } from "./group";
+export type { AsChildProps, BindingChildren, ButtonPartProps, HostProps } from "./part";
 export { Topbar, type TopbarIconProps, type TopbarLabelProps, type TopbarRootProps, type TopbarSide } from "./topbar";
-export { AlertDialog, type AlertDialogProps } from "./alert-dialog";
-export type { AlertDialogBinding, DialogAction } from "./alert-dialog-state";
+export {
+	AlertDialog,
+	Dialog,
+	type AlertDialogButtonProps,
+	type AlertDialogOpenChangeReason,
+	type AlertDialogRootProps,
+	type DialogBinding,
+	type DialogButtonProps,
+	type DialogContentProps,
+	type DialogOpenChangeReason,
+	type DialogRootProps,
+	type DialogTriggerProps,
+} from "./dialog";
 export { heartbeat, preRender, type FrameListener } from "./frame-loop";
-export type { Children, ChildFactory, Getter, Placement, Value } from "./props";
+export type { Children, ChildFactory, Getter, Value } from "./props";

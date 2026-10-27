@@ -1,6 +1,7 @@
 import { GuiService, UserInputService } from "@rbxts/services";
-import { cleanup, context, derive, effect, read, root, source } from "@rbxts/vide";
+import { cleanup, context, derive, effect, read, root, source, untrack } from "@rbxts/vide";
 import { adapter, type AnvilAdapter } from "./adapter";
+import { Attribute } from "./attributes";
 import type { Value } from "./props";
 import { enter, hasModal, leave, top, type ModalState } from "./modal-state";
 import { decide, emptySelection, type Selection, type SelectionEvent } from "./selection-policy";
@@ -20,11 +21,15 @@ const topId = derived.topId;
 export const selectedObject = source<GuiObject | undefined>(undefined);
 export const textEditing = source(false);
 export const menuOpen = source(false);
-interface RootRecord {
+interface Snapshot {
+	readonly object: GuiObject;
+	readonly owner: Owner;
+}
+interface ScopeRecord {
 	readonly id: number;
-	readonly serial: number;
 	readonly mode: "Native" | "Pointer";
 	readonly onClose?: () => void;
+	restore?: Snapshot;
 	root?: GuiObject;
 	close?: GuiObject;
 	selection: Selection<GuiObject>;
@@ -35,12 +40,12 @@ interface Control {
 	readonly buttonADown?: (input: InputObject) => void;
 	readonly buttonAUp?: (input: InputObject) => void;
 }
-const roots = new Map<number, RootRecord>();
+const scopes = new Map<number, ScopeRecord>();
 const controls = new Map<GuiObject, Control>();
 const topbarIcons = new Map<GuiObject, () => boolean>();
 let lastTopbarIcon: GuiObject | undefined;
+let opener: GuiObject | undefined;
 let serial = 0;
-let baseRestore: GuiObject | undefined;
 let writing = false;
 let generation = 0;
 let waiting: RBXScriptConnection[] = [];
@@ -60,12 +65,12 @@ export function active(owner: Owner): boolean {
 }
 function native(owner: Owner): boolean {
 	if (owner === "Topbar") return !modalOpen();
-	return active(owner) && (owner === "Base" || roots.get(owner)?.mode === "Native");
+	return active(owner) && (owner === "Base" || scopes.get(owner)?.mode === "Native");
 }
 function finite(value: number): boolean {
 	return value === value && math.abs(value) < math.huge;
 }
-function alive(object: GuiObject): boolean {
+export function alive(object: GuiObject): boolean {
 	if (!object.FindFirstAncestorOfClass("PlayerGui")) return false;
 	let ancestor: Instance | undefined = object;
 	while (ancestor) {
@@ -74,6 +79,9 @@ function alive(object: GuiObject): boolean {
 		ancestor = ancestor.Parent;
 	}
 	return true;
+}
+function available(object: GuiObject): boolean {
+	return alive(object) && object.GetAttribute(Attribute.Disabled) !== true;
 }
 function ready(object: GuiObject, isRoot: boolean): boolean {
 	if ((!isRoot && !object.Selectable) || !alive(object)) return false;
@@ -135,7 +143,7 @@ function canSelect(owner: Owner): boolean {
 function request(owner: Owner, target: GuiObject | "Root"): void {
 	cancelRequest();
 	const token = generation;
-	const object = target === "Root" ? (typeIs(owner, "number") ? roots.get(owner)?.root : undefined) : target;
+	const object = target === "Root" ? (typeIs(owner, "number") ? scopes.get(owner)?.root : undefined) : target;
 	if (!object) return;
 	let queued = false;
 	const retry = () => {
@@ -162,14 +170,19 @@ function request(owner: Owner, target: GuiObject | "Root"): void {
 	};
 	queue();
 }
+// Runtime entry points run from cleanups and signals, often while another Vide effect is active; untrack keeps them from
+// subscribing that effect to runtime state.
 function dispatch(id: number, event: SelectionEvent<GuiObject>): void {
-	const record = roots.get(id);
+	untrack(() => decideFor(id, event));
+}
+function decideFor(id: number, event: SelectionEvent<GuiObject>): void {
+	const record = scopes.get(id);
 	if (!record) return;
 	const current = GuiService.SelectedObject;
 	const decision = decide(record.selection, event, {
 		current: current && controls.get(current)?.owner === id ? current : undefined,
 		close: record.close,
-		alive: (object) => controls.get(object)?.owner === id && alive(object),
+		alive: (object) => controls.get(object)?.owner === id && available(object),
 		canSelect: canSelect(id),
 	});
 	record.selection = decision.selection;
@@ -181,6 +194,9 @@ function cancelA(): void {
 	session?.control.buttonAUp?.(session.input);
 }
 function selectionChanged(): void {
+	untrack(followSelection);
+}
+function followSelection(): void {
 	const previous = selectedObject();
 	const current = GuiService.SelectedObject;
 	selectedObject(current);
@@ -209,28 +225,51 @@ function selectionChanged(): void {
 		});
 }
 
-export function openRoot(mode: "Native" | "Pointer", onClose?: () => void): number {
-	const id = ++serial;
-	if (!modalOpen()) {
-		const selected = GuiService.SelectedObject;
-		baseRestore = selected && controls.get(selected)?.owner === "Base" ? selected : undefined;
+// A pointer press can open a scope while gamepad selection sits elsewhere, so the pressed control is the restore target.
+export function pressing<R>(object: GuiObject | undefined, run: () => R): R {
+	const previous = opener;
+	opener = object;
+	try {
+		return run();
+	} finally {
+		opener = previous;
 	}
-	roots.set(id, { id, serial: id, mode, onClose, selection: emptySelection() });
+}
+function snapshot(): Snapshot | undefined {
+	const object = opener ?? GuiService.SelectedObject;
+	const control = object && controls.get(object);
+	if (!object || !control) return undefined;
+	// The top bar sits outside every scope, so an icon is a restore target only when it opened the scope.
+	if (control.owner === "Topbar" && object !== opener) return undefined;
+	return { object, owner: control.owner };
+}
+function restore(target: Snapshot): void {
+	const { object, owner } = target;
+	if (controls.get(object)?.owner !== owner || !available(object)) return;
+	if (typeIs(owner, "number")) dispatch(owner, { kind: "Restore", object });
+	else request(owner, object);
+}
+export function openScope(mode: "Native" | "Pointer", onClose?: () => void, restoreFocus = true): number {
+	const id = ++serial;
+	scopes.set(id, { id, mode, onClose, restore: restoreFocus ? snapshot() : undefined, selection: emptySelection() });
+	// Every control outside a trap stops being selectable, so a selection left on one would outlive the trap unowned.
+	const selected = GuiService.SelectedObject;
+	if (selected && controls.has(selected)) writeSelection();
 	state(enter(state(), { id, serial: id, order: undefined }));
 	return id;
 }
-export function attachRoot(id: number, root: GuiObject): () => void {
-	const record = roots.get(id);
+export function attachScope(id: number, root: GuiObject): () => void {
+	const record = scopes.get(id);
 	if (!record) return () => {};
 	record.stopAttachment?.();
 	record.root = root;
 	let orderConnection: RBXScriptConnection | undefined;
 	const update = () => {
-		if (roots.get(id) !== record) return;
+		if (scopes.get(id) !== record) return;
 		orderConnection?.Disconnect();
 		const gui = root.FindFirstAncestorWhichIsA("ScreenGui");
 		if (gui) orderConnection = gui.GetPropertyChangedSignal("DisplayOrder").Connect(update);
-		state(enter(state(), { id, serial: record.serial, order: gui?.DisplayOrder }));
+		state(enter(state(), { id, serial: id, order: gui?.DisplayOrder }));
 	};
 	const connection = root.AncestryChanged.Connect(update);
 	update();
@@ -241,27 +280,37 @@ export function attachRoot(id: number, root: GuiObject): () => void {
 	record.stopAttachment = detach;
 	return detach;
 }
-export function closeRoot(id: number): void {
-	const record = roots.get(id);
+export function closeScope(id: number): void {
+	untrack(() => close(id));
+}
+function close(id: number): void {
+	const record = scopes.get(id);
 	if (!record) return;
 	record.stopAttachment?.();
 	const wasTop = topId() === id || topId() === undefined;
 	const selected = GuiService.SelectedObject;
 	const selectedOwner = selected && controls.get(selected)?.owner;
-	const restore = wasTop && !record.selection.paused && (selected === undefined || selectedOwner === id);
+	const restoring = wasTop && !record.selection.paused && (selected === undefined || selectedOwner === id);
 	if (selectedOwner === id) writeSelection();
-	roots.delete(id);
+	scopes.delete(id);
+	// A scope opened from inside this one restores where this one would have, so closing out of order still lands home.
+	for (const [, other] of scopes) if (other.restore?.owner === id) other.restore = record.restore;
 	state(leave(state(), id));
-	if (!modalOpen()) {
-		const target = baseRestore;
-		baseRestore = undefined;
-		if (restore && target && controls.get(target)?.owner === "Base") request("Base", target);
-	}
+	if (restoring && record.restore) restore(record.restore);
+}
+// An untrapped scope adds no owner. It only puts selection back when it unmounts holding it.
+export function holdRestore(): (host?: GuiObject) => void {
+	const saved = snapshot();
+	return (host) => {
+		const selected = GuiService.SelectedObject;
+		if (saved && (selected === undefined || (host !== undefined && selected.IsDescendantOf(host))))
+			untrack(() => restore(saved));
+	};
 }
 export function registerControl(object: GuiObject, control: Control, fallback = false): () => void {
 	controls.set(object, control);
 	object.SelectionImageObject = blankSelectionImage;
-	const record = typeIs(control.owner, "number") ? roots.get(control.owner) : undefined;
+	const record = typeIs(control.owner, "number") ? scopes.get(control.owner) : undefined;
 	if (fallback && record) record.close = object;
 	return () => {
 		const selected = GuiService.SelectedObject === object;
@@ -296,7 +345,7 @@ function selectTopbarIcon(): void {
 }
 export function markControl(owner: Owner, object: GuiObject, marked: boolean): void {
 	if (!typeIs(owner, "number")) return;
-	const record = roots.get(owner);
+	const record = scopes.get(owner);
 	const current = GuiService.SelectedObject;
 	const replaces = current && record?.selection.marked.includes(current) ? current : undefined;
 	dispatch(owner, marked ? { kind: "Marked", object, replaces } : { kind: "Unmarked", object });
@@ -324,6 +373,7 @@ export function useSelection(
 	});
 	return {
 		allowed,
+		object: () => object(),
 		selected: () => object() !== undefined && selectedObject() === object(),
 		action: (instance: GuiObject) => {
 			const unregister = registerControl(
@@ -379,7 +429,7 @@ function start(host: AnvilAdapter): void {
 	const stopClose = [
 		host.close.onPressed(() => {
 			const id = topId();
-			const record = id !== undefined ? roots.get(id) : undefined;
+			const record = id !== undefined ? scopes.get(id) : undefined;
 			if (!armed || !record || record.mode !== "Native" || textEditing() || menuOpen()) return;
 			armed = false;
 			record.onClose?.();
@@ -413,7 +463,7 @@ function start(host: AnvilAdapter): void {
 				cancelRequest();
 				cancelA();
 			}
-			if (id !== undefined && roots.get(id)?.mode === "Native" && !editing) {
+			if (id !== undefined && scopes.get(id)?.mode === "Native" && !editing) {
 				if (!menu && GuiService.SelectedObject === undefined)
 					task.defer(() => {
 						if (topId() === id) dispatch(id, { kind: "Shown" });

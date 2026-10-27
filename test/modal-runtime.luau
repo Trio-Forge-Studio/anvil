@@ -33,7 +33,7 @@ return {
 			h.runtime.active(admin) and not first.Selectable and not adminButton.Selectable,
 			"Admin stays top despite a later Screen and stays pointer only"
 		)
-		h.runtime.closeRoot(admin)
+		h.runtime.closeScope(admin)
 		h.flush()
 		assert(first.Selectable and h.gui.SelectedObject == first, "closing Admin uncovers native Screen")
 		h.stop()
@@ -92,13 +92,13 @@ return {
 		local intermediate = h.root(20)
 		h.control(intermediate, "Intermediate", { selectFirst = true })
 		h.flush()
-		h.runtime.closeRoot(intermediate)
+		h.runtime.closeScope(intermediate)
 		h.flush()
 		assert(
 			h.runtime.active(reveal) and h.gui.SelectedObject ~= first,
 			"non-top disposal never moves the foreground"
 		)
-		h.runtime.closeRoot(reveal)
+		h.runtime.closeScope(reveal)
 		h.flush()
 		assert(h.gui.SelectedObject == replacement, "uncover falls back to the rebuilt action")
 		h.stop()
@@ -110,14 +110,14 @@ return {
 		local id = h.root(10)
 		h.control(id, "First", { selectFirst = true })
 		h.flush()
-		h.runtime.closeRoot(id)
+		h.runtime.closeScope(id)
 		h.flush()
 		assert(h.gui.SelectedObject == hud, "last close restores previous HUD selection")
 		h.select(nil)
 		local second = h.root(10)
 		h.control(second, "First", { selectFirst = true })
 		h.flush()
-		h.runtime.closeRoot(second)
+		h.runtime.closeScope(second)
 		h.flush()
 		assert(h.gui.SelectedObject == nil, "no snapshot means no random HUD selection")
 		h.stop()
@@ -155,7 +155,7 @@ return {
 		local b = h.begin(h.enum.KeyCode.ButtonB)
 		h.close.Pressed:Fire()
 		assert(calls == 1, "one physical press dispatches once")
-		h.runtime.closeRoot(id)
+		h.runtime.closeScope(id)
 		h.root(10, "Native", function()
 			calls += 10
 		end)
@@ -306,7 +306,7 @@ return {
 		h.select(hud)
 		local id, root = h.root(10, "Native", nil, true)
 		h.select(nil)
-		h.runtime.closeRoot(id)
+		h.runtime.closeScope(id)
 		h.attach(root, 10)
 		h.flush()
 		assert(

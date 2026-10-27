@@ -1,6 +1,7 @@
-import { effect, read } from "@rbxts/vide";
+import { effect, read, untrack } from "@rbxts/vide";
 import { Attribute } from "./attributes";
 import type { Value } from "./props";
+import { selectedObject } from "./runtime";
 import { useControllable } from "./use-controllable";
 import { usePress, type PressBinding } from "./use-press";
 
@@ -9,7 +10,10 @@ export interface TabsOptions<T> {
 	defaultValue?: T;
 	onValueChange?: (value: T) => void;
 	disabled?: Value<boolean>;
+	activationMode?: Value<TabsActivationMode>;
 }
+// Manual by default: Roblox's gamepad navigation passes through tab rows on its way to other controls.
+export type TabsActivationMode = "Automatic" | "Manual";
 export interface TabsTriggerOptions {
 	disabled?: Value<boolean>;
 	selectFirst?: Value<boolean>;
@@ -33,8 +37,9 @@ export function useTabs<T>(options: TabsOptions<T> = {}): TabsBinding<T> {
 		value,
 		trigger: (key, trigger = {}) => {
 			const selected = () => value() === key;
+			const disabled = () => read(options.disabled ?? false) || read(trigger.disabled ?? false);
 			const press = usePress({
-				disabled: () => read(options.disabled ?? false) || read(trigger.disabled ?? false),
+				disabled,
 				selectFirst: trigger.selectFirst,
 				onPress: () => setValue(key),
 			});
@@ -44,6 +49,10 @@ export function useTabs<T>(options: TabsOptions<T> = {}): TabsBinding<T> {
 				action: (instance) => {
 					press.action(instance);
 					effect(() => instance.SetAttribute(Attribute.Selected, selected()));
+					effect(() => {
+						if (read(options.activationMode ?? "Manual") !== "Automatic") return;
+						if (selectedObject() === instance && !disabled()) untrack(() => setValue(key));
+					});
 				},
 			};
 		},

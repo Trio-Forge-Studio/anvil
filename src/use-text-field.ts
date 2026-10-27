@@ -1,6 +1,6 @@
 import { cleanup, effect, read, source } from "@rbxts/vide";
 import { Attribute } from "./attributes";
-import { useModalActive } from "./modal";
+import { useModalActive } from "./focus-scope";
 import type { Value } from "./props";
 import { completionText, limitText, validateMaxLength } from "./text-field-state";
 import { useControllable } from "./use-controllable";
