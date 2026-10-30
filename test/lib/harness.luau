@@ -30,6 +30,7 @@ local function loadVide(): Mock
 	for _, name in { "source", "derive", "effect", "cleanup", "untrack", "read", "context", "root", "batch", "show" } do
 		vide[name] = load(name)
 	end
+	vide.For = load("components").For
 	return vide
 end
 local function signal(): Mock
@@ -356,6 +357,7 @@ local function harness(options: { deferredText: boolean }?): Mock
 		InputEnded = signal(),
 		InputChanged = signal(),
 		WindowFocusReleased = signal(),
+		WindowFocused = signal(),
 		GamepadDisconnected = signal(),
 		TouchPinch = signal(),
 		TextBoxFocused = signal(),
@@ -375,6 +377,7 @@ local function harness(options: { deferredText: boolean }?): Mock
 	}
 	local close = { Pressed = signal(), Released = signal() }
 	local heartbeat = signal()
+	local clock = 0
 	local device = vide.source("Gamepad")
 	local contexts = {}
 	local feedback: { string } = {}
@@ -413,6 +416,11 @@ local function harness(options: { deferredText: boolean }?): Mock
 			ColorSequence = roblox.ColorSequence,
 			Font = roblox.Font,
 			Instance = { new = instance },
+			os = setmetatable({
+				clock = function()
+					return clock
+				end,
+			}, { __index = os }),
 			task = {
 				defer = function(run)
 					table.insert(deferred, run)
@@ -561,7 +569,9 @@ local function harness(options: { deferredText: boolean }?): Mock
 		end
 		h.flush()
 	end
+	-- The clock only moves with frames, so timers advance exactly by the deltas a spec ticks.
 	function h.tick(delta)
+		clock += delta
 		heartbeat:Fire(delta)
 	end
 	function h.stop()
