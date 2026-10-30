@@ -144,13 +144,14 @@ Parts are ready-made components built on the hooks described later in this READM
 | `TextField` | `Root`, `Input` | `useTextField` |
 | `Topbar` | `Root`, `Icon`, `Label` | `useTopbarIcon` |
 | `PanZoom` | `Root`, `Viewport`, `Content` | `usePanZoom` |
+| `Toast` | `Viewport`, `Root` | `createToaster` |
 
-- Vide builds JSX children before their parent, so a root can't give context to children written inside its tags. That is why each `Root` except `Topbar.Root` takes its children as a function. It sets up the context and then calls the function with the hook's binding, and parts at any depth inside that function can read the context. A part rendered outside its root raises an error that names both, such as `Tabs.Trigger must be used inside Tabs.Root`.
+- Vide builds JSX children before their parent, so a root can't give context to children written inside its tags. That is why each `Root` except `Topbar.Root` and `Toast.Root` takes its children as a function. It sets up the context and then calls the function with the hook's binding, and parts at any depth inside that function can read the context. A part rendered outside its root raises an error that names both, such as `Tabs.Trigger must be used inside Tabs.Root`. `Toast.Viewport` takes the children function instead, and calls it once for each toast.
 - `Tabs.Content`, `Dialog.Content` and `AlertDialog.Content` also take a children function. It runs each time the content mounts.
 - Button parts take plain children or a function of their binding. The button parts are `Tabs.Trigger`, `RadioGroup.Item`, `Dialog.Trigger`, `Dialog.Close`, `AlertDialog.Action`, `AlertDialog.Cancel` and the roots of `Checkbox`, `Switch`, `Slider` and `TextField`. A trigger or dialog button passes its `PressBinding`, with `selected` added on a tab trigger and `checked` on a radio item, and a root passes its hook's binding. Styled children can then read `highlighted`, `pressed` or `selected` directly. With `asChild`, the function returns your element. Anvil calls a function child exactly once, so return reactive children such as `show(…)` from it instead of passing them directly.
-- Except for `Topbar.Icon` and `Topbar.Label`, which draw a styled icon and label, a part renders one host, a `textbutton`, `frame` or `textbox`, with Roblox's visible defaults turned off. The text is empty, `AutoButtonColor` is off, and the background is transparent with no border. Parts set no colours or sizes, except that dialog content fills its parent so it can hold selection, and `PanZoom.Viewport` fills its parent by default. Other properties and events pass through to the host and are type-checked against its class.
-- Every part takes `asChild` except the roots of `Tabs`, `RadioGroup`, `Dialog`, `AlertDialog`, `PanZoom` and `Topbar`, and the `Topbar.Icon` and `Topbar.Label` parts, which draw their own artwork. With it, the part renders nothing of its own and gives its behaviour to your element. The children must resolve to exactly one `GuiObject`. UI modifiers beside it, such as `uicorner`, `uipadding`, `uilistlayout` or `uistroke`, move under it, and anything else raises an error. The part connects its own handlers, so handlers already on your element keep running.
-- Apart from the top bar parts, parts write only these properties on their host: `Selectable`, `NextSelectionUp`, `NextSelectionDown`, `NextSelectionLeft`, `NextSelectionRight`, `SelectionImageObject` and the Anvil attributes. Dialog content also writes `SelectionGroup` and the four `SelectionBehavior` properties. A few parts draw state: `Checkbox.Indicator` and `RadioGroup.Indicator` write `Visible`, `Slider.Range` writes `Size`, `Slider.Thumb` writes `Position`, and `TextField.Input` writes `Text`, `TextEditable` and `ClearTextOnFocus`. `PanZoom.Viewport` writes `Active` and adds a `ScaleProbe` frame, and `PanZoom.Content` writes `AnchorPoint`, `Position`, `Size` and `Visible` and adds a `UIScale`. In Studio, an `asChild` control warns when your element already sets one of the selection properties.
+- Except for `Topbar.Icon` and `Topbar.Label`, which draw a styled icon and label, a part renders one host, a `textbutton`, `frame` or `textbox`, with Roblox's visible defaults turned off. The text is empty, `AutoButtonColor` is off, and the background is transparent with no border. Parts set no colours or sizes, except that dialog content fills its parent so it can hold selection, and `PanZoom.Viewport` and `Toast.Viewport` fill their parent by default. Other properties and events pass through to the host and are type-checked against its class.
+- Every part takes `asChild` except `Toast.Viewport`, the roots of `Tabs`, `RadioGroup`, `Dialog`, `AlertDialog`, `PanZoom` and `Topbar`, and the `Topbar.Icon` and `Topbar.Label` parts, which draw their own artwork. With it, the part renders nothing of its own and gives its behaviour to your element. The children must resolve to exactly one `GuiObject`. UI modifiers beside it, such as `uicorner`, `uipadding`, `uilistlayout` or `uistroke`, move under it, and anything else raises an error. The part connects its own handlers, so handlers already on your element keep running.
+- Apart from the top bar parts, parts write only these properties on their host: `Selectable`, `NextSelectionUp`, `NextSelectionDown`, `NextSelectionLeft`, `NextSelectionRight`, `SelectionImageObject` and the Anvil attributes. Dialog content also writes `SelectionGroup` and the four `SelectionBehavior` properties. A few parts draw state: `Checkbox.Indicator` and `RadioGroup.Indicator` write `Visible`, `Slider.Range` writes `Size`, `Slider.Thumb` writes `Position`, and `TextField.Input` writes `Text`, `TextEditable` and `ClearTextOnFocus`. `PanZoom.Viewport` writes `Active` and adds a `ScaleProbe` frame, and `PanZoom.Content` writes `AnchorPoint`, `Position`, `Size` and `Visible` and adds a `UIScale`. `Toast.Viewport` adds a `ScaleProbe` and a `HoverCatcher` frame, and `Toast.Root` writes `AnchorPoint`, `Position`, `ZIndex` and `Interactable` and adds a `UIScale` named `ToastScale`. In Studio, an `asChild` control warns when your element already sets one of the selection properties.
 
 ### Tabs
 
@@ -475,6 +476,92 @@ export function WorldMap() {
 - Nothing moves while a trapped scope above the pan zoom's own scope is open, or while the Roblox menu is open. A drag in progress ends and a glide stops. Gamepad controls also stop while text is being edited or the viewport is hidden.
 - The view, `{ pan, zoom }`, is controllable through `view`, `defaultView` and `onViewChange`. The pan is in content pixels: the offset of the content centre from the viewport centre before scaling. A content point `p` sits `(p - contentSize / 2 + view().pan) * scale()` logical pixels from the viewport centre, where `scale()` is `fit() * view().zoom`. Use that with `half()`, half the viewport's logical size, to place overlays such as tooltips inside `PanZoom.Viewport`.
 - The viewport writes `Dragging`. Call `usePanZoom` directly and attach `viewport` and `content` to your own frames to skip the parts.
+
+## Toast
+
+A toast is a short message that leaves by itself, such as "Saved" or "Alex invited you to their party". Anvil keeps the queue, the timers, the stack layout and the swipe gesture. Your game draws each toast and animates it in and out.
+
+`createToaster` makes a toaster, a plain object that holds the toasts. It needs no Vide root, so a controller can own one and add toasts from anywhere. `Toast.Viewport` shows one toaster. Its children function draws one toast and returns a `Toast.Root`, the frame that Anvil measures and moves. The type parameter is whatever your game needs to draw a toast, and Anvil never reads it.
+
+```tsx group=toast
+import { GuiService } from "@rbxts/services";
+import Vide, { show, spring } from "@rbxts/vide";
+import { createToaster, Toast, usePress, type ToastBinding } from "@trioforge/anvil";
+
+interface Message {
+	readonly text: string;
+}
+
+export const toaster = createToaster<Message>({ limit: 3 });
+
+function OpenButton(props: { onPress: () => boolean }) {
+	const press = usePress({ onPress: props.onPress });
+	return <textbutton action={press.action} Text="Open" Size={UDim2.fromOffset(80, 28)} />;
+}
+
+function Card(props: { toast: ToastBinding<Message> }) {
+	const toast = props.toast;
+	const still = GuiService.ReducedMotionEnabled;
+	const [scale, setScale] = spring(() => (toast.closing() ? 0 : 1), 0.3);
+	setScale({ position: still ? 1 : 0 });
+	return (
+		<Toast.Root holdExit={() => !still && scale() > 0.01}>
+			<frame
+				Size={UDim2.fromOffset(280, 0)}
+				AutomaticSize={Enum.AutomaticSize.Y}
+				BackgroundColor3={() => (toast.highlighted() ? Color3.fromRGB(60, 60, 70) : Color3.fromRGB(40, 40, 48))}
+			>
+				<uiscale Scale={scale} />
+				<uilistlayout Padding={new UDim(0, 6)} />
+				<textlabel Text={() => toast.data().text} Size={new UDim2(1, 0, 0, 24)} />
+				{show(toast.hasAction, () => (
+					<OpenButton onPress={toast.act} />
+				))}
+			</frame>
+		</Toast.Root>
+	);
+}
+
+export function Toasts() {
+	return (
+		<Toast.Viewport toaster={toaster} placement="TopRight">
+			{(toast) => <Card toast={toast} />}
+		</Toast.Viewport>
+	);
+}
+```
+
+```ts group=toast
+declare function openParty(): boolean;
+
+const id = toaster.add({ data: { text: "Saving" }, duration: math.huge });
+toaster.update(id, { text: "Saved" });
+toaster.close(id);
+
+toaster.add({ id: "invite", data: { text: "Alex invited you to their party" }, action: () => openParty() });
+
+const resume = toaster.pause();
+resume();
+```
+
+- `add` returns the toast's id. `duration` is in seconds and defaults to the toaster's `duration`, which is 4. A `duration` of `math.huge` keeps the toast until something closes it.
+- Adding a toast with the id of one that is waiting, showing or leaving replaces its data, action, duration and `onClose`. The toast keeps its place and its timer restarts. A leaving toast comes back.
+- `update` changes only the data of a waiting or showing toast. It takes a value or a function of the previous data, and returns `false` when no such toast exists. `close` and `clear` close toasts with the reason `"Close"`.
+- `onClose` runs once, when the toast starts to leave. Its reason is `"Timeout"`, `"Action"`, `"Dismiss"`, `"Swipe"`, `"Overflow"` or `"Close"`.
+- `limit` is how many toasts show at once, 3 by default. Leaving toasts don't count. With `overflow: "Close"`, the default, a new toast shows at once and the oldest timed toast leaves with `"Overflow"`. The oldest sticky toast leaves only when every toast on screen is sticky. With `overflow: "Queue"`, toasts past the limit wait in arrival order. A waiting toast's timer starts when it shows.
+- Timers count down only while a `Toast.Viewport` shows the toaster. Without a viewport, a closed toast leaves at once. Each `pause()` call is one hold. The timers resume with the time they had left once every hold is released, and releasing a hold twice does nothing.
+- The viewport pauses the timers while the pointer is over the stack, while the gamepad selection is inside a toast, during a swipe, while a deck is expanded, while the window has no focus, and while the Roblox menu is open.
+- An action returns `false` to refuse, which keeps the toast. Any other result closes it with `"Action"`. Pass `toast.act` to your button's `onPress`. It returns `false` when the action refused or could not run, so a `usePress` button plays `"Refused"`. It never runs an action twice at once, and the timers pause while an action runs, even one that yields.
+- If the toast was replaced while its action ran, the replacement stays. That happens when the action adds a toast with the same id, or when one arrives while the action yields.
+- `toast.close` is the player's dismissal, with the reason `"Dismiss"`. Use it for a close button or a tap target behind the content.
+- A closing toast stays mounted while it leaves, and `toast.closing()` turns true. Anvil removes it on the next frame unless `holdExit` returns true, so return true while your exit animation plays. The toaster's `exitTimeout`, 1 second by default, limits every exit. With Reduced Motion on, return `false` from `holdExit` and skip the entrance.
+- `placement` is `"TopLeft"`, `"TopCenter"`, `"TopRight"`, `"BottomLeft"`, `"BottomCenter"` or `"BottomRight"`, and the newest toast sits at that edge. `layout="List"`, the default, stacks the toasts `gap` pixels apart, 10 by default.
+- `layout="Deck"` puts the newest toast in front and shows `peek` pixels, 12 by default, of each smaller toast behind it. The deck expands into a list while the pointer is over the stack or the gamepad selection is inside a toast. On touch, the first tap on a collapsed deck expands it, and a touch outside the stack collapses it. While the deck is collapsed, a toast behind the front gets `collapsedHeight()`, the front toast's height, so you can draw it at that height.
+- Anvil measures each `Toast.Root` in logical pixels, so a `UIScale` above the viewport changes nothing. It glides each root to its place, and with Reduced Motion on, the roots jump instead. Inset the viewport with a parent frame, and put your own `UIScale` on a child of the root.
+- On touch, dragging a toast toward the side it is placed on dismisses it with `"Swipe"`. A centred toast swipes toward the top or bottom edge. A short, slow drag glides back. Releasing a swipe never presses a button in the toast.
+- Anvil never selects a control inside a toast for the player, not even to restore the selection when a screen that the toast opened closes. Roblox's own navigation still reaches the control. A control in a leaving toast, or in a toast behind the front of a collapsed deck, can't be selected or pressed.
+- Inside a trapped scope, Roblox's own fallback selection can still pick a toast control, so render the viewport outside trapped scopes.
+- The root writes `Closing`, `Expanded`, `Highlighted`, `Swiping` and a numeric `Depth`, which is 0 for the front toast. The binding has getters for the same states, `closing`, `expanded`, `highlighted` and `depth`, and `swipe`, which goes from 0 at rest to 1 at the dismiss distance.
 
 ## Top bar
 
