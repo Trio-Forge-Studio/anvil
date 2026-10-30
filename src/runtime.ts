@@ -10,6 +10,9 @@ import { pickTopbarIcon } from "./topbar-policy";
 export type Owner = number | "Base" | "Topbar";
 export const ownerContext = context<Owner>("Base");
 export const closeFallbackContext = context(false);
+// Set inside a toast to a getter that is true while the toast takes no input. Anvil never selects a toast control for
+// the player, but native navigation still reaches it.
+export const toastContext = context<(() => boolean) | undefined>(undefined);
 const state = source<ModalState<number>>({ entries: [] });
 // Never destroyed, so module state stays derived for the life of the realm, inside or outside any Vide scope.
 const [, derived] = root(() => ({
@@ -37,6 +40,7 @@ interface ScopeRecord {
 }
 interface Control {
 	readonly owner: Owner;
+	readonly toast: boolean;
 	readonly buttonADown?: (input: InputObject) => void;
 	readonly buttonAUp?: (input: InputObject) => void;
 }
@@ -206,9 +210,9 @@ function followSelection(): void {
 	if (!writing) cancelRequest();
 	if (current && topbarIcons.has(current)) lastTopbarIcon = current;
 	const control = current && controls.get(current);
-	if (current && control && typeIs(control.owner, "number"))
-		dispatch(control.owner, { kind: "Selected", object: current });
-	else if (!writing) {
+	if (current && control && typeIs(control.owner, "number")) {
+		if (!control.toast) dispatch(control.owner, { kind: "Selected", object: current });
+	} else if (!writing) {
 		const previousControl = previous && controls.get(previous);
 		const owner = previousControl?.owner;
 		const id = topId();
@@ -238,7 +242,7 @@ export function pressing<R>(object: GuiObject | undefined, run: () => R): R {
 function snapshot(): Snapshot | undefined {
 	const object = opener ?? GuiService.SelectedObject;
 	const control = object && controls.get(object);
-	if (!object || !control) return undefined;
+	if (!object || !control || control.toast) return undefined;
 	// The top bar sits outside every scope, so an icon is a restore target only when it opened the scope.
 	if (control.owner === "Topbar" && object !== opener) return undefined;
 	return { object, owner: control.owner };
@@ -358,16 +362,17 @@ export function useSelection(
 	} = {},
 ) {
 	const owner = ownerContext();
-	const fallback = closeFallbackContext();
+	const inert = toastContext();
+	const fallback = closeFallbackContext() && !inert;
 	const object = source<GuiObject>();
-	const allowed = () => active(owner);
+	const allowed = () => active(owner) && !inert?.();
 	effect(() => {
 		const instance = object();
-		if (instance) instance.Selectable = native(owner);
+		if (instance) instance.Selectable = native(owner) && !inert?.();
 	});
 	effect(() => {
 		const instance = object();
-		if (!instance) return;
+		if (!instance || inert) return;
 		markControl(owner, instance, read(options.selectFirst ?? false));
 		cleanup(() => markControl(owner, instance, false));
 	});
@@ -378,7 +383,7 @@ export function useSelection(
 		action: (instance: GuiObject) => {
 			const unregister = registerControl(
 				instance,
-				{ owner, buttonADown: options.buttonADown, buttonAUp: options.buttonAUp },
+				{ owner, toast: inert !== undefined, buttonADown: options.buttonADown, buttonAUp: options.buttonAUp },
 				fallback,
 			);
 			object(instance);

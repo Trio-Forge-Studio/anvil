@@ -8,4 +8,8 @@ export const Attribute = table.freeze({
 	Editing: "Editing",
 	Invalid: "Invalid",
 	Notice: "Notice",
+	Closing: "Closing",
+	Expanded: "Expanded",
+	Swiping: "Swiping",
+	Depth: "Depth",
 } as const);
